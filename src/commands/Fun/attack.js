@@ -23,7 +23,7 @@ export default {
           { name: "🔨 Bonk", value: "bonk" },
           { name: "🦷 Bite", value: "bite" },
           { name: "🦵 Kick", value: "kick" },
-          { name: "🖕 Middle Finger", value: "middle_finger" }
+          { name: "🖕 Finger", value: "finger" }
         )
     ),
 
@@ -36,7 +36,6 @@ export default {
     const target = interaction.options.getMember("person");
     const type = interaction.options.getString("type");
 
-    // Available attack types
     const attacks = {
       slap: {
         emoji: "👋",
@@ -73,10 +72,10 @@ export default {
         search: "kick"
       },
 
-      middle_finger: {
+      finger: {
         emoji: "🖕",
-        name: "Middle Finger",
-        verb: "gives the middle finger to",
+        name: "Finger",
+        verb: "gives the finger to",
         search: "middle finger"
       }
     };
@@ -94,7 +93,7 @@ export default {
         `🔨 **Bonk**\n` +
         `🦷 **Bite**\n` +
         `🦵 **Kick**\n` +
-        `🖕 **Middle Finger**`
+        `🖕 **Finger**`
       );
 
       return await InteractionHelper.safeEditReply(interaction, {
@@ -126,6 +125,7 @@ export default {
       });
     }
 
+    // Use server nickname, falling back to display name
     const attackerName =
       attacker.nickname || attacker.user.displayName;
 
@@ -133,7 +133,6 @@ export default {
       target.nickname || target.user.displayName;
 
     try {
-      // Search GifSnap for the selected attack
       const apiUrl =
         `https://gifsnap.com/api/v1/gifs/search` +
         `?q=${encodeURIComponent(attack.search)}` +
@@ -151,7 +150,6 @@ export default {
 
       console.log("GifSnap response:", data);
 
-      // Get GIF results
       const gifs = Array.isArray(data.data)
         ? data.data.filter(
             (gif) => gif && gif.type === "gif" && gif.url
@@ -184,7 +182,7 @@ export default {
     } catch (error) {
       console.error("Attack GIF error:", error);
 
-      // Still show the attack if GIF service fails
+      // Attack still happens if the GIF service fails
       const embed = successEmbed(
         `${attack.emoji} ${attack.name}!`,
         `${attack.emoji} **${attackerName}** ${attack.verb} **${targetName}**!`
