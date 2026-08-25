@@ -22,7 +22,8 @@ export default {
           { name: "👊 Punch", value: "punch" },
           { name: "🔨 Bonk", value: "bonk" },
           { name: "🦷 Bite", value: "bite" },
-          { name: "🦵 Kick", value: "kick" }
+          { name: "🦵 Kick", value: "kick" },
+          { name: "🖕 Middle Finger", value: "middle_finger" }
         )
     ),
 
@@ -35,17 +36,64 @@ export default {
     const target = interaction.options.getMember("person");
     const type = interaction.options.getString("type");
 
-    // Wrong usage / invalid target
-    if (!target) {
+    const attackTypes = {
+      slap: {
+        emoji: "👋",
+        name: "Slap",
+        verb: "slaps",
+        search: "slap"
+      },
+
+      punch: {
+        emoji: "👊",
+        name: "Punch",
+        verb: "punches",
+        search: "punch"
+      },
+
+      bonk: {
+        emoji: "🔨",
+        name: "Bonk",
+        verb: "bonks",
+        search: "bonk"
+      },
+
+      bite: {
+        emoji: "🦷",
+        name: "Bite",
+        verb: "bites",
+        search: "bite"
+      },
+
+      kick: {
+        emoji: "🦵",
+        name: "Kick",
+        verb: "kicks",
+        search: "kick"
+      },
+
+      middle_finger: {
+        emoji: "🖕",
+        name: "Middle Finger",
+        verb: "gives the middle finger to",
+        search: "middle finger"
+      }
+    };
+
+    const attack = attackTypes[type];
+
+    // Wrong usage
+    if (!target || !attack) {
       const embed = warningEmbed(
         "❌ Wrong Usage",
-        `Please provide a valid person to attack.\n\n` +
+        `Please provide a valid person and attack type.\n\n` +
         `**Available attack types:**\n` +
-        `👋 Slap\n` +
-        `👊 Punch\n` +
-        `🔨 Bonk\n` +
-        `🦷 Bite\n` +
-        `🦵 Kick`
+        `👋 **Slap**\n` +
+        `👊 **Punch**\n` +
+        `🔨 **Bonk**\n` +
+        `🦷 **Bite**\n` +
+        `🦵 **Kick**\n` +
+        `🖕 **Middle Finger**`
       );
 
       return await InteractionHelper.safeEditReply(interaction, {
@@ -77,91 +125,59 @@ export default {
       });
     }
 
-    // Server nickname, falling back to display name
     const attackerName =
       attacker.nickname || attacker.user.displayName;
 
     const targetName =
       target.nickname || target.user.displayName;
 
-    const attacks = {
-      slap: {
-        emoji: "👋",
-        name: "Slap",
-        verb: "slaps"
-      },
-
-      punch: {
-        emoji: "👊",
-        name: "Punch",
-        verb: "punches"
-      },
-
-      bonk: {
-        emoji: "🔨",
-        name: "Bonk",
-        verb: "bonks"
-      },
-
-      bite: {
-        emoji: "🦷",
-        name: "Bite",
-        verb: "bites"
-      },
-
-      kick: {
-        emoji: "🦵",
-        name: "Kick",
-        verb: "kicks"
-      }
-    };
-
-    const attack = attacks[type];
-
-    // Safety check in case an invalid type somehow gets through
-    if (!attack) {
-      const embed = warningEmbed(
-        "❌ Wrong Usage",
-        `That isn't a valid attack type!\n\n` +
-        `**Available attack types:**\n` +
-        `👋 Slap\n` +
-        `👊 Punch\n` +
-        `🔨 Bonk\n` +
-        `🦷 Bite\n` +
-        `🦵 Kick`
-      );
-
-      return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [embed]
-      });
-    }
-
     try {
-      // Nekos.Best returns a random GIF for the selected category
-      const response = await fetch(
-        `https://nekos.best/api/v2/${type}?amount=1`,
-        {
-          headers: {
-            "User-Agent": "SoverignSMPBot/1.0 (Discord Bot)"
-          }
+      /*
+       * GifSnap:
+       * No API key required.
+       * Searches GIFs and returns proxied GIF URLs.
+       */
+      const apiUrl =
+        `https://gifsnap.com/api/v1/gifs/search?q=${encodeURIComponent(
+          attack.search
+        )}&page=1&limit=25`;
+
+      const response = await fetch(apiUrl, {
+        headers: {
+          "User-Agent": "SoverignSMPBot/1.0 (Discord Bot)"
         }
-      );
+      });
 
       if (!response.ok) {
         throw new Error(
-          `Nekos.Best API returned HTTP ${response.status}`
+          `GifSnap API returned HTTP ${response.status}`
         );
       }
 
       const data = await response.json();
 
-      console.log("Nekos.Best response:", data);
-
-      const gifUrl = data?.results?.[0]?.url;
-
-      if (!gifUrl) {
-        throw new Error("Nekos.Best did not return a GIF URL.");
+      if (!Array.isArray(data.data) || data.data.length === 0) {
+        throw new Error(
+          `No GIFs found for "${attack.search}".`
+        );
       }
+
+      // Only use actual GIF results
+      const gifs = data.data.filter(
+        (gif) => gif.type === "gif" && gif.url
+      );
+
+      if (gifs.length === 0) {
+        throw new Error(
+          `No usable GIFs found for "${attack.search}".`
+        );
+      }
+
+      // Pick a random GIF from the results
+      const randomGif =
+        gifs[Math.floor(Math.random() * gifs.length)];
+
+      const gifUrl = randomGif.url;
 
       const embed = successEmbed(
         `${attack.emoji} ${attack.name}!`,
@@ -177,10 +193,10 @@ export default {
     } catch (error) {
       console.error("Attack GIF error:", error);
 
-      const embed = warningEmbed(
-        "⚠️ GIF Error",
-        `**${attackerName}** ${attack.verb} **${targetName}**!\n\n` +
-        `I couldn't load the attack GIF right now, but the attack still happened!`
+      // The attack still happens even if the GIF service fails
+      const embed = successEmbed(
+        `${attack.emoji} ${attack.name}!`,
+        `${attack.emoji} **${attackerName}** ${attack.verb} **${targetName}**!`
       );
 
       await InteractionHelper.safeEditReply(interaction, {
