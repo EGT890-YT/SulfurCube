@@ -28,7 +28,7 @@ export default {
     const target = interaction.options.getMember("user");
     const customMessage = interaction.options.getString("message");
 
-    // Prevent hugging yourself
+    // Can't hug yourself
     if (hugger.id === target.id) {
       const embed = warningEmbed(
         "🤗 Invalid Hug",
@@ -40,7 +40,7 @@ export default {
       });
     }
 
-    // Prevent hugging bots
+    // Can't hug bots
     if (target.user.bot) {
       const embed = warningEmbed(
         "🤖 Invalid Target",
@@ -52,29 +52,32 @@ export default {
       });
     }
 
-    // Get server nicknames, falling back to display name
-    const huggerName =
-      hugger.nickname || hugger.user.displayName;
-
-    const targetName =
-      target.nickname || target.user.displayName;
+    const huggerName = hugger.nickname || hugger.user.displayName;
+    const targetName = target.nickname || target.user.displayName;
 
     try {
-      // Get a random hug GIF
+      // Get a RANDOM hug GIF
       const response = await fetch(
-        "https://api.waifu.pics/sfw/hug"
+        "https://api.gifukai.com/v1/hug"
       );
 
       if (!response.ok) {
-        throw new Error(
-          `Waifu.pics API returned ${response.status}`
-        );
+        throw new Error(`Gifukai API returned ${response.status}`);
       }
 
       const data = await response.json();
 
-      if (!data.url) {
-        throw new Error("The API did not return a GIF URL.");
+      // Gifukai returns the GIF URL
+      const gifUrl =
+        data.url ||
+        data.gif ||
+        data.gif_url ||
+        data.media?.gif ||
+        data.media?.url;
+
+      if (!gifUrl) {
+        console.error("Gifukai response:", data);
+        throw new Error("No GIF URL was returned.");
       }
 
       const description = customMessage
@@ -86,8 +89,7 @@ export default {
         description
       );
 
-      // Add the random GIF
-      embed.setImage(data.url);
+      embed.setImage(gifUrl);
 
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [embed]
@@ -96,7 +98,6 @@ export default {
     } catch (error) {
       console.error("Hug GIF error:", error);
 
-      // Send the hug even if the GIF API fails
       const embed = successEmbed(
         "🤗 Hug!",
         customMessage
