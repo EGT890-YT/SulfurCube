@@ -35,6 +35,24 @@ export default {
     const target = interaction.options.getMember("person");
     const type = interaction.options.getString("type");
 
+    // Wrong usage / invalid target
+    if (!target) {
+      const embed = warningEmbed(
+        "❌ Wrong Usage",
+        `Please provide a valid person to attack.\n\n` +
+        `**Available attack types:**\n` +
+        `👋 Slap\n` +
+        `👊 Punch\n` +
+        `🔨 Bonk\n` +
+        `🦷 Bite\n` +
+        `🦵 Kick`
+      );
+
+      return await InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed]
+      });
+    }
+
     // Prevent attacking yourself
     if (attacker.id === target.id) {
       const embed = warningEmbed(
@@ -59,7 +77,7 @@ export default {
       });
     }
 
-    // Get server nicknames, falling back to display name
+    // Server nickname, falling back to display name
     const attackerName =
       attacker.nickname || attacker.user.displayName;
 
@@ -100,30 +118,49 @@ export default {
 
     const attack = attacks[type];
 
+    // Safety check in case an invalid type somehow gets through
+    if (!attack) {
+      const embed = warningEmbed(
+        "❌ Wrong Usage",
+        `That isn't a valid attack type!\n\n` +
+        `**Available attack types:**\n` +
+        `👋 Slap\n` +
+        `👊 Punch\n` +
+        `🔨 Bonk\n` +
+        `🦷 Bite\n` +
+        `🦵 Kick`
+      );
+
+      return await InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed]
+      });
+    }
+
     try {
-      // Get a random GIF for the selected attack type
+      // Nekos.Best returns a random GIF for the selected category
       const response = await fetch(
         `https://nekos.best/api/v2/${type}?amount=1`,
         {
           headers: {
-            "User-Agent": "SoverignSMP-Bot/1.0 (Discord Bot)"
+            "User-Agent": "SoverignSMPBot/1.0 (Discord Bot)"
           }
         }
       );
 
       if (!response.ok) {
         throw new Error(
-          `Nekos.Best API returned ${response.status}`
+          `Nekos.Best API returned HTTP ${response.status}`
         );
       }
 
       const data = await response.json();
 
+      console.log("Nekos.Best response:", data);
+
       const gifUrl = data?.results?.[0]?.url;
 
       if (!gifUrl) {
-        console.error("Nekos.Best response:", data);
-        throw new Error("No GIF URL was returned.");
+        throw new Error("Nekos.Best did not return a GIF URL.");
       }
 
       const embed = successEmbed(
@@ -131,7 +168,6 @@ export default {
         `${attack.emoji} **${attackerName}** ${attack.verb} **${targetName}**!`
       );
 
-      // Add the random GIF
       embed.setImage(gifUrl);
 
       await InteractionHelper.safeEditReply(interaction, {
@@ -141,10 +177,10 @@ export default {
     } catch (error) {
       console.error("Attack GIF error:", error);
 
-      // Still send the attack message if the GIF API fails
-      const embed = successEmbed(
-        `${attack.emoji} ${attack.name}!`,
-        `${attack.emoji} **${attackerName}** ${attack.verb} **${targetName}**!`
+      const embed = warningEmbed(
+        "⚠️ GIF Error",
+        `**${attackerName}** ${attack.verb} **${targetName}**!\n\n` +
+        `I couldn't load the attack GIF right now, but the attack still happened!`
       );
 
       await InteractionHelper.safeEditReply(interaction, {
