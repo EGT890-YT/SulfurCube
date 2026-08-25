@@ -28,7 +28,7 @@ export default {
     const target = interaction.options.getMember("user");
     const customMessage = interaction.options.getString("message");
 
-    // Prevent hugging yourself
+    // Can't hug yourself
     if (hugger.id === target.id) {
       const embed = warningEmbed(
         "🤗 Invalid Hug",
@@ -40,7 +40,7 @@ export default {
       });
     }
 
-    // Prevent hugging bots
+    // Can't hug bots
     if (target.user.bot) {
       const embed = warningEmbed(
         "🤖 Invalid Target",
@@ -55,35 +55,20 @@ export default {
     const huggerName = hugger.nickname || hugger.user.displayName;
     const targetName = target.nickname || target.user.displayName;
 
-    // Get a random GIPHY hug GIF
-    const apiKey = config.giphyApiKey;
-
-    if (!apiKey) {
-      const embed = warningEmbed(
-        "⚠️ GIF Error",
-        "The GIPHY API key hasn't been configured."
-      );
-
-      return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [embed]
-      });
-    }
-
     try {
+      // Get a random hug GIF
       const response = await fetch(
-        `https://api.giphy.com/v1/gifs/random?api_key=${encodeURIComponent(apiKey)}&tag=hug&rating=g`
+        "https://api.waifu.pics/sfw/hug"
       );
 
       if (!response.ok) {
-        throw new Error(`GIPHY returned ${response.status}`);
+        throw new Error(`GIF API returned ${response.status}`);
       }
 
       const data = await response.json();
 
-      const gifUrl = data?.data?.images?.original?.url;
-
-      if (!gifUrl) {
-        throw new Error("No GIF was returned.");
+      if (!data.url) {
+        throw new Error("No GIF URL was returned.");
       }
 
       const description = customMessage
@@ -95,7 +80,7 @@ export default {
         description
       );
 
-      embed.setImage(gifUrl);
+      embed.setImage(data.url);
 
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [embed]
@@ -104,6 +89,7 @@ export default {
     } catch (error) {
       console.error("Hug GIF error:", error);
 
+      // Still send the hug if the GIF API fails
       const embed = successEmbed(
         "🤗 Hug!",
         customMessage
