@@ -32,7 +32,7 @@ export default {
     if (tickler.id === target.id) {
       const embed = warningEmbed(
         "🤭 Nice Try!",
-        `**${tickler.username}**, you can't tickle yourself!`
+        `**${tickler.displayName}**, you can't tickle yourself!`
       );
 
       return await InteractionHelper.safeEditReply(interaction, {
