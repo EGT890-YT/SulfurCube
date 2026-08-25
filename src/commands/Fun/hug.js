@@ -1,27 +1,112 @@
-const response = await fetch("https://api.waifu.pics/sfw/hug");
+import { SlashCommandBuilder } from 'discord.js';
+import { successEmbed, warningEmbed } from '../../utils/embeds.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
-if (!response.ok) {
-  throw new Error(`API returned ${response.status}`);
-}
+export default {
+  data: new SlashCommandBuilder()
+    .setName("hug")
+    .setDescription("Give another user a hug!")
+    .addUserOption((option) =>
+      option
+        .setName("user")
+        .setDescription("The user you want to hug.")
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName("message")
+        .setDescription("Add a custom message to your hug.")
+        .setRequired(false)
+    ),
 
-const data = await response.json();
+  category: 'Fun',
 
-if (!data.url) {
-  throw new Error("API did not return a GIF URL.");
-}
+  async execute(interaction, config, client) {
+    await InteractionHelper.safeDefer(interaction);
 
-const description = customMessage
-  ? `🤗 **${huggerName}** hugs **${targetName}**!\n\n${customMessage}`
-  : `🤗 **${huggerName}** gives **${targetName}** a big hug!`;
+    const hugger = interaction.member;
+    const target = interaction.options.getMember("user");
+    const customMessage = interaction.options.getString("message");
 
-const embed = successEmbed(
-  "🤗 Hug!",
-  description
-);
+    // Prevent hugging yourself
+    if (hugger.id === target.id) {
+      const embed = warningEmbed(
+        "🤗 Invalid Hug",
+        `**${hugger.displayName}**, you can't hug yourself!`
+      );
 
-embed.setImage(data.url);
+      return await InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed]
+      });
+    }
 
-await InteractionHelper.safeEditReply(interaction, {
-  content: data.url,
-  embeds: [embed]
-});
+    // Prevent hugging bots
+    if (target.user.bot) {
+      const embed = warningEmbed(
+        "🤖 Invalid Target",
+        "You can't hug a bot! Hug a real person instead."
+      );
+
+      return await InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed]
+      });
+    }
+
+    // Get server nicknames, falling back to display name
+    const huggerName =
+      hugger.nickname || hugger.user.displayName;
+
+    const targetName =
+      target.nickname || target.user.displayName;
+
+    try {
+      // Get a random hug GIF
+      const response = await fetch(
+        "https://api.waifu.pics/sfw/hug"
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Waifu.pics API returned ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (!data.url) {
+        throw new Error("The API did not return a GIF URL.");
+      }
+
+      const description = customMessage
+        ? `🤗 **${huggerName}** hugs **${targetName}**!\n\n${customMessage}`
+        : `🤗 **${huggerName}** gives **${targetName}** a big hug!`;
+
+      const embed = successEmbed(
+        "🤗 Hug!",
+        description
+      );
+
+      // Add the random GIF
+      embed.setImage(data.url);
+
+      await InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed]
+      });
+
+    } catch (error) {
+      console.error("Hug GIF error:", error);
+
+      // Send the hug even if the GIF API fails
+      const embed = successEmbed(
+        "🤗 Hug!",
+        customMessage
+          ? `**${huggerName}** hugs **${targetName}**!\n\n${customMessage}`
+          : `**${huggerName}** gives **${targetName}** a big hug!`
+      );
+
+      await InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed]
+      });
+    }
+  },
+};
