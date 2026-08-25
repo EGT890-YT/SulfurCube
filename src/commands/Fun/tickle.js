@@ -53,10 +53,10 @@ export default {
     }
 
     const defaultMessage =
-      `😂 **${tickler.username}** is tickling **${target.username}**!`;
+      `😂 **${tickler.displayName}** is tickling **${target.displayName}**!`;
 
     const description = customMessage
-      ? `😂 **${tickler.username}** tickles **${target.username}**!\n\n${customMessage}`
+      ? `😂 **${tickler.displayName}** tickles **${target.displayName}**!\n\n${customMessage}`
       : defaultMessage;
 
     const embed = successEmbed(
