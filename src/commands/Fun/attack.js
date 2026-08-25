@@ -36,7 +36,8 @@ export default {
     const target = interaction.options.getMember("person");
     const type = interaction.options.getString("type");
 
-    const attackTypes = {
+    // Available attack types
+    const attacks = {
       slap: {
         emoji: "👋",
         name: "Slap",
@@ -80,7 +81,7 @@ export default {
       }
     };
 
-    const attack = attackTypes[type];
+    const attack = attacks[type];
 
     // Wrong usage
     if (!target || !attack) {
@@ -132,21 +133,13 @@ export default {
       target.nickname || target.user.displayName;
 
     try {
-      /*
-       * GifSnap:
-       * No API key required.
-       * Searches GIFs and returns proxied GIF URLs.
-       */
+      // Search GifSnap for the selected attack
       const apiUrl =
-        `https://gifsnap.com/api/v1/gifs/search?q=${encodeURIComponent(
-          attack.search
-        )}&page=1&limit=25`;
+        `https://gifsnap.com/api/v1/gifs/search` +
+        `?q=${encodeURIComponent(attack.search)}` +
+        `&page=1&limit=25`;
 
-      const response = await fetch(apiUrl, {
-        headers: {
-          "User-Agent": "SoverignSMPBot/1.0 (Discord Bot)"
-        }
-      });
+      const response = await fetch(apiUrl);
 
       if (!response.ok) {
         throw new Error(
@@ -156,24 +149,22 @@ export default {
 
       const data = await response.json();
 
-      if (!Array.isArray(data.data) || data.data.length === 0) {
+      console.log("GifSnap response:", data);
+
+      // Get GIF results
+      const gifs = Array.isArray(data.data)
+        ? data.data.filter(
+            (gif) => gif && gif.type === "gif" && gif.url
+          )
+        : [];
+
+      if (gifs.length === 0) {
         throw new Error(
           `No GIFs found for "${attack.search}".`
         );
       }
 
-      // Only use actual GIF results
-      const gifs = data.data.filter(
-        (gif) => gif.type === "gif" && gif.url
-      );
-
-      if (gifs.length === 0) {
-        throw new Error(
-          `No usable GIFs found for "${attack.search}".`
-        );
-      }
-
-      // Pick a random GIF from the results
+      // Pick a random GIF
       const randomGif =
         gifs[Math.floor(Math.random() * gifs.length)];
 
@@ -193,7 +184,7 @@ export default {
     } catch (error) {
       console.error("Attack GIF error:", error);
 
-      // The attack still happens even if the GIF service fails
+      // Still show the attack if GIF service fails
       const embed = successEmbed(
         `${attack.emoji} ${attack.name}!`,
         `${attack.emoji} **${attackerName}** ${attack.verb} **${targetName}**!`
