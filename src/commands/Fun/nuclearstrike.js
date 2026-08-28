@@ -1,4 +1,4 @@
-```js
+
 import { SlashCommandBuilder } from 'discord.js';
 import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -151,4 +151,4 @@ export default {
     }
   },
 };
-```
+
