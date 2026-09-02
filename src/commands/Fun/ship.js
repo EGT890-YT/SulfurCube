@@ -1,3 +1,4 @@
+```js
 import { SlashCommandBuilder } from 'discord.js';
 import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -9,7 +10,7 @@ export default {
     .addUserOption((option) =>
       option
         .setName('person')
-        .setDescription('The person you want to send on a date with you.')
+        .setDescription('Choose one person to send on a date.')
         .setRequired(false)
     ),
 
@@ -19,26 +20,49 @@ export default {
     await InteractionHelper.safeDefer(interaction);
 
     const selectedPerson = interaction.options.getMember('person');
-    const shipper = interaction.member;
 
-    let person1 = shipper;
-    let person2 = selectedPerson;
+    let person1;
+    let person2;
 
-    // If no person was specified, choose a random human member
-    if (!person2) {
-      try {
-        const members = await interaction.guild.members.fetch();
+    try {
+      // Get all members in the server
+      const members = await interaction.guild.members.fetch();
 
-        const eligibleMembers = members.filter(
-          (member) =>
-            !member.user.bot &&
-            member.id !== shipper.id
+      // Only allow real human members
+      const eligibleMembers = members.filter(
+        (member) => !member.user.bot
+      );
+
+      /*
+       * /ship @person
+       *
+       * The selected person goes on the date
+       * with somebody completely random.
+       */
+      if (selectedPerson) {
+        // Bots cannot be selected
+        if (selectedPerson.user.bot) {
+          const embed = warningEmbed(
+            '🤖 Invalid Person',
+            'Bots aren\'t allowed on dates! 😭'
+          );
+
+          return await InteractionHelper.safeEditReply(interaction, {
+            embeds: [embed]
+          });
+        }
+
+        person1 = selectedPerson;
+
+        // Remove selected person from the random pool
+        const randomPool = eligibleMembers.filter(
+          (member) => member.id !== person1.id
         );
 
-        if (eligibleMembers.size === 0) {
+        if (randomPool.size === 0) {
           const embed = warningEmbed(
-            '💕 No One To Ship',
-            'There are no other human members available to go on a date with you!'
+            '💕 Not Enough People',
+            'There aren\'t enough people in the server to create a date!'
           );
 
           return await InteractionHelper.safeEditReply(interaction, {
@@ -47,30 +71,66 @@ export default {
         }
 
         const randomIndex = Math.floor(
-          Math.random() * eligibleMembers.size
+          Math.random() * randomPool.size
         );
 
-        person2 = [...eligibleMembers.values()][randomIndex];
+        person2 = [...randomPool.values()][randomIndex];
 
-      } catch (error) {
-        console.error('Ship member selection error:', error);
+      } else {
+        /*
+         * /ship
+         *
+         * Pick TWO completely random humans.
+         */
+        if (eligibleMembers.size < 2) {
+          const embed = warningEmbed(
+            '💕 Not Enough People',
+            'There aren\'t enough people in the server to create a date!'
+          );
 
-        const embed = warningEmbed(
-          '❌ Error',
-          'I couldn\'t find someone to ship with you right now!'
+          return await InteractionHelper.safeEditReply(interaction, {
+            embeds: [embed]
+          });
+        }
+
+        const randomMembers = [...eligibleMembers.values()];
+
+        const firstIndex = Math.floor(
+          Math.random() * randomMembers.length
         );
 
-        return await InteractionHelper.safeEditReply(interaction, {
-          embeds: [embed]
-        });
+        person1 = randomMembers[firstIndex];
+
+        // Remove first person so they cannot be selected again
+        const remainingMembers = randomMembers.filter(
+          (member) => member.id !== person1.id
+        );
+
+        const secondIndex = Math.floor(
+          Math.random() * remainingMembers.length
+        );
+
+        person2 = remainingMembers[secondIndex];
       }
+
+    } catch (error) {
+      console.error('Ship member selection error:', error);
+
+      const embed = warningEmbed(
+        '❌ Error',
+        'I couldn\'t find enough people to create a date right now!'
+      );
+
+      return await InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed]
+      });
     }
 
-    // Prevent shipping yourself with yourself
-    if (person1.id === person2.id) {
+    // Extra safety check
+    if (!person1 || !person2 || person1.id === person2.id) {
       const embed = warningEmbed(
         '💕 Invalid Ship',
-        'You can\'t go on a date with yourself! 😭'
+        'I couldn\'t create a valid pairing. Try again!'
       );
 
       return await InteractionHelper.safeEditReply(interaction, {
@@ -78,19 +138,7 @@ export default {
       });
     }
 
-    // Prevent bots from being manually selected
-    if (person2.user.bot) {
-      const embed = warningEmbed(
-        '🤖 Invalid Ship',
-        'Bots aren\'t allowed on dates! Pick a real person instead. 😭'
-      );
-
-      return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [embed]
-      });
-    }
-
-    // Get names using server nickname, falling back to display name
+    // Get names using server nicknames, falling back to display names
     const person1Name =
       person1.nickname ||
       person1.user.displayName;
@@ -99,11 +147,12 @@ export default {
       person2.nickname ||
       person2.user.displayName;
 
+    // Actual Discord pings
+    const person1Mention = `<@${person1.id}>`;
+    const person2Mention = `<@${person2.id}>`;
+
     /*
      * DATE TYPES
-     *
-     * Each date has its own GIF search term.
-     * The GIF is about the date itself, NOT the people.
      */
     const dates = [
       {
@@ -158,7 +207,7 @@ export default {
       }
     ];
 
-    // Select the date BEFORE the loading stages
+    // Randomize date before the loading stages
     const date =
       dates[Math.floor(Math.random() * dates.length)];
 
@@ -167,7 +216,7 @@ export default {
      */
     const loadingEmbed = successEmbed(
       '💕 Loading...',
-      '🔮 Finding your perfect date...'
+      '🔮 Finding out who is going on a date...'
     );
 
     await InteractionHelper.safeEditReply(interaction, {
@@ -178,26 +227,28 @@ export default {
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
     /*
-     * SHOW THE TWO PEOPLE
+     * REVEAL THE TWO PEOPLE
      */
     const peopleEmbed = successEmbed(
-      '💕 SHIP!',
-      `💞 **${person1Name}** + **${person2Name}**`
+      '💕 Date Pair!',
+      `💞 ${person1Mention} and ${person2Mention} are going on a date together!`
     );
 
     await InteractionHelper.safeEditReply(interaction, {
-      embeds: [peopleEmbed]
+      embeds: [peopleEmbed],
+      allowedMentions: {
+        users: [person1.id, person2.id]
+      }
     });
-
-    // Short pause before second loading stage
-    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     /*
      * SECOND LOADING STAGE
      */
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     const dateLoadingEmbed = successEmbed(
       `${date.emoji} Loading Date...`,
-      `📅 Planning a **${date.name}** for **${person1Name}** and **${person2Name}**...`
+      `📅 Deciding what **${person1Name}** and **${person2Name}** are going to do...`
     );
 
     await InteractionHelper.safeEditReply(interaction, {
@@ -258,7 +309,7 @@ export default {
       `💕 **${person1Name}** and **${person2Name}** are going on a **${date.name}!**`
     );
 
-    // Only add the GIF if one was successfully found
+    // Add date-related GIF if one was found
     if (gifUrl) {
       finalEmbed.setImage(gifUrl);
     }
@@ -268,4 +319,4 @@ export default {
     });
   },
 };
-
+```
