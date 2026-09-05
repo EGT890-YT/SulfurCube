@@ -4,11 +4,21 @@ import { createHqPanel } from '../../commands/Owner/hq.js';
 
 export default [
   {
+    name: 'hq_page',
+    async execute(interaction, client, args) {
+      if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
+      const page = Number(args[0]) || 0;
+      const selectedGuildId = args[1] === 'none' ? null : args[1];
+      return interaction.update(createHqPanel(client, selectedGuildId, page));
+    },
+  },
+  {
     name: 'hq_refresh',
     async execute(interaction, client, args) {
       if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
-      const guildId = args[0] === 'none' ? null : args[0];
-      return interaction.update(createHqPanel(client, guildId));
+      const page = Number(args[0]) || 0;
+      const selectedGuildId = args[1] === 'none' ? null : args[1];
+      return interaction.update(createHqPanel(client, selectedGuildId, page));
     },
   },
   {
@@ -35,14 +45,13 @@ export default [
     async execute(interaction, client, args) {
       if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
       const guildId = args[0];
-      if (!guildId || guildId === 'none' || guildId === HQ_GUILD_ID) {
-        return interaction.reply({ content: '❌ I will not leave the HQ guild.', ephemeral: true });
-      }
+      const page = Number(args[1]) || 0;
+      if (!guildId || guildId === 'none' || guildId === HQ_GUILD_ID) return interaction.reply({ content: '❌ I will not leave the HQ guild.', ephemeral: true });
       const guild = client.guilds.cache.get(guildId);
       if (!guild) return interaction.reply({ content: '❌ That guild is no longer available.', ephemeral: true });
       const name = guild.name;
       await guild.leave();
-      return interaction.update({ ...createHqPanel(client), content: `🚪 Left **${name}**.` });
+      return interaction.update({ ...createHqPanel(client, null, page), content: `🚪 Left **${name}**.` });
     },
   },
   {
