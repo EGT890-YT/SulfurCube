@@ -178,6 +178,11 @@ export function isBotOwner(userId, client = null) {
   return getBotOwners().includes(String(userId)) || isConfiguredBotOwner(userId, client);
 }
 
+// Legacy compatibility: maintenance mode has been removed and can never block commands.
+export function isMaintenanceMode() {
+  return false;
+}
+
 export function getBotMessage(key, replacements = {}) {
   let message = botConfig.messages?.[key] || key;
   for (const [placeholder, value] of Object.entries(replacements)) {
