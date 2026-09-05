@@ -1,7 +1,6 @@
 import { Events } from "discord.js";
 import { logger, startupLog } from "../utils/logger.js";
 import config from "../config/application.js";
-import botConfig from "../config/bot.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
 import { reconcileTicketPanels, reconcileVerificationPanels, reconcileReactionRolePanelHealth } from "../services/panelHealthService.js";
 import { reconcileLevelRoles } from "../services/leveling/levelRoleSyncService.js";
@@ -13,11 +12,6 @@ export default {
 
   async execute(client) {
     try {
-      // Maintenance/testing are runtime controls. Always start the bot normally
-      // so a stale MAINTENANCE_MODE environment value cannot lock the bot after restart.
-      botConfig.commands.maintenanceMode = false;
-      botConfig.commands.testingMode = false;
-
       client.user.setPresence(config.bot.presence);
 
       startupLog(`Ready! Logged in as ${client.user.tag}`);
