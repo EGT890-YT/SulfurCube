@@ -7,7 +7,21 @@ export default {
   data: new SlashCommandBuilder()
     .setName('bot')
     .setDescription('Owner-only bot controls.')
-    .addSubcommand((sub) => sub.setName('on').setDescription('Fully turn SulfurCube back on everywhere.'))
+    .addSubcommand((sub) =>
+      sub
+        .setName('on')
+        .setDescription('Turn SulfurCube on in this server, or all servers.')
+        .addStringOption((option) =>
+          option
+            .setName('scope')
+            .setDescription('Choose whether to enable this server or every server.')
+            .setRequired(false)
+            .addChoices(
+              { name: 'This server', value: 'server' },
+              { name: 'All servers', value: 'all' },
+            ),
+        ),
+    )
     .addSubcommand((sub) => sub.setName('off').setDescription('Disable SulfurCube in this server only.'))
     .addSubcommand((sub) => sub.setName('maintenance').setDescription('Put SulfurCube into server-wide maintenance mode.'))
     .addSubcommand((sub) => sub.setName('testing').setDescription('Enable testing mode while maintenance is active.'))
@@ -32,7 +46,7 @@ export default {
       await updateGuildConfig(client, guildId, { botDisabled: true }, { source: 'owner.bot.off', userId: interaction.user.id });
 
       return interaction.reply({
-        content: `🔴 **SulfurCube is now OFF in ${interaction.guild.name}.**\n\nOther servers are unaffected. Use \`/bot on\` to fully restore the bot everywhere.`,
+        content: `🔴 **SulfurCube is now OFF in ${interaction.guild.name}.**\n\nOther servers are unaffected. Use \`/bot on\` to turn it back on here.`,
         ephemeral: true,
       });
     }
@@ -55,32 +69,47 @@ export default {
         });
       }
 
-      // Testing mode takes the bot out of the maintenance command lock while
-      // remembering that this is a testing state until /bot on is used.
       botConfig.commands.maintenanceMode = false;
       botConfig.commands.testingMode = true;
 
       return interaction.reply({
-        content: '🧪 **SulfurCube is now in testing mode.**\n\nNormal commands are available again for testing. Use `/bot on` to clear testing mode and fully restore the bot.',
+        content: '🧪 **SulfurCube is now in testing mode.**\n\nNormal commands are available again for testing. Use `/bot on` with **All servers** to fully restore everything.',
         ephemeral: true,
       });
     }
 
     if (action === 'on') {
-      botConfig.commands.maintenanceMode = false;
-      botConfig.commands.testingMode = false;
+      const scope = interaction.options.getString('scope') || 'server';
 
-      // Fully restore every server that was disabled with /bot off.
-      const updates = [...client.guilds.cache.values()].map((guild) =>
-        updateGuildConfig(client, guild.id, { botDisabled: false }, {
-          source: 'owner.bot.on',
-          userId: interaction.user.id,
-        }).catch(() => null),
-      );
-      await Promise.all(updates);
+      if (scope === 'all') {
+        botConfig.commands.maintenanceMode = false;
+        botConfig.commands.testingMode = false;
+
+        const updates = [...client.guilds.cache.values()].map((guild) =>
+          updateGuildConfig(client, guild.id, { botDisabled: false }, {
+            source: 'owner.bot.on.all',
+            userId: interaction.user.id,
+          }).catch(() => null),
+        );
+        await Promise.all(updates);
+
+        return interaction.reply({
+          content: `🟢 **SulfurCube is now ON in all ${client.guilds.cache.size} server(s).**\n\nMaintenance, testing mode, and all per-server shutdowns have been cleared.`,
+          ephemeral: true,
+        });
+      }
+
+      if (!guildId) {
+        return interaction.reply({ content: '❌ `/bot on` can only enable a single server when used inside a server. Use the **All servers** option from a server context.', ephemeral: true });
+      }
+
+      await updateGuildConfig(client, guildId, { botDisabled: false }, {
+        source: 'owner.bot.on.server',
+        userId: interaction.user.id,
+      });
 
       return interaction.reply({
-        content: '🟢 **SulfurCube is now fully ON.**\n\nMaintenance, testing mode, and per-server bot shutdowns have all been cleared.',
+        content: `🟢 **SulfurCube is now ON in ${interaction.guild.name}.**\n\nOther servers are unaffected.`,
         ephemeral: true,
       });
     }
