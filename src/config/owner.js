@@ -1,6 +1,7 @@
 export const BOT_OWNER_ID = process.env.BOT_OWNER_ID?.trim() || null;
 export const HQ_GUILD_ID = '1473773901753618580';
 export const BOT_CLIENT_ID = '1281977840648327292';
+export const DISCORD_BOT_ID = '1541748691063283742';
 
 export function isBotOwner(userId, client = null) {
   if (!userId) return false;
