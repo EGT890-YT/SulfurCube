@@ -69,13 +69,14 @@ export default {
               );
             }
 
-            // /bot and /hq are recovery commands. They must still reach their
-            // own owner-only checks while maintenance mode is active.
             const isOwner = isBotOwner(interaction.user.id, client);
-            const isRecoveryCommand = ['bot', 'hq'].includes(interaction.commandName);
-            const isOwnerRecoveryCommand = isOwner && isRecoveryCommand;
+            const isBotCommand = interaction.commandName === 'bot';
+            const isOwnerRecoveryCommand = isOwner && isBotCommand;
 
-            if (isMaintenanceMode() && !isOwner && !isRecoveryCommand) {
+            // Maintenance is intentionally simple: every command is blocked
+            // except /bot. The /bot command performs its own owner-only check
+            // and is therefore always available for recovery.
+            if (isMaintenanceMode() && !isBotCommand) {
               throw createError(
                 'Bot is in maintenance mode', ErrorTypes.CONFIGURATION, getBotMessage('maintenanceMode'),
                 withTraceContext({ commandName: interaction.commandName }, interactionTraceContext)
