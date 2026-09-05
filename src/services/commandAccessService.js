@@ -114,6 +114,12 @@ export function isCommandEnabledInConfig(config, commandName, category) {
   // Check if it's a subcommand (contains space)
   const isSubcommand = normalizedName.includes(' ');
   const baseCommand = isSubcommand ? normalizedName.split(' ')[0] : normalizedName;
+
+  // /bot and /hq remain available to the owner so the bot can always be recovered.
+  if (config?.botDisabled && !['bot', 'hq'].includes(baseCommand)) {
+    return false;
+  }
+
   const isProtected = isProtectedCommand(baseCommand);
 
   // Protected commands and their subcommands should always remain enabled.
