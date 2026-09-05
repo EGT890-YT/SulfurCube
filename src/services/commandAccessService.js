@@ -47,7 +47,6 @@ export function buildCommandRegistry(client) {
       });
     }
 
-    // Add the main command
     categories.get(categoryKey).commands.push({
       name: command.data.name,
       description: command.data.description || 'No description',
@@ -55,7 +54,6 @@ export function buildCommandRegistry(client) {
       isSubcommand: false,
     });
 
-    // Add subcommands if they exist
     const commandJson = command.data.toJSON?.() || {};
 
     for (const option of commandJson.options || []) {
@@ -111,18 +109,22 @@ export function isProtectedCommand(commandName) {
 export function isCommandEnabledInConfig(config, commandName, category) {
   const normalizedName = String(commandName || '').toLowerCase();
 
-  // Check if it's a subcommand (contains space)
   const isSubcommand = normalizedName.includes(' ');
   const baseCommand = isSubcommand ? normalizedName.split(' ')[0] : normalizedName;
 
-  // /bot and /hq remain available to the owner so the bot can always be recovered.
+  // Owner recovery commands must ALWAYS remain available when the bot is
+  // disabled in a guild. This is deliberately checked before any other
+  // guild-level command disable logic.
+  if (config?.botDisabled === true && ['bot', 'hq'].includes(baseCommand)) {
+    return true;
+  }
+
   if (config?.botDisabled && !['bot', 'hq'].includes(baseCommand)) {
     return false;
   }
 
   const isProtected = isProtectedCommand(baseCommand);
 
-  // Protected commands and their subcommands should always remain enabled.
   if (isProtected) {
     return true;
   }
@@ -130,17 +132,14 @@ export function isCommandEnabledInConfig(config, commandName, category) {
   const disabledCommands = normalizeToggleRecord(config?.disabledCommands);
   const disabledCategories = normalizeToggleRecord(config?.disabledCategories);
 
-  // Check if the specific command/subcommand is disabled
   if (disabledCommands[normalizedName]) {
     return false;
   }
 
-  // For subcommands, also check if the base command is disabled
   if (isSubcommand && disabledCommands[baseCommand]) {
     return false;
   }
 
-  // Check if the category is disabled
   if (disabledCategories[normalizeCategoryKey(category)]) {
     return false;
   }
