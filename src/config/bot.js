@@ -27,6 +27,8 @@ export const botConfig = {
     defaultCooldown: 3,
     deleteCommands: false,
     testGuildId: process.env.TEST_GUILD_ID,
+    maintenanceMode: false,
+    testingMode: false,
     prefix: process.env.PREFIX || "s?",
   },
 
@@ -178,9 +180,8 @@ export function isBotOwner(userId, client = null) {
   return getBotOwners().includes(String(userId)) || isConfiguredBotOwner(userId, client);
 }
 
-// Legacy compatibility: maintenance mode has been removed and can never block commands.
 export function isMaintenanceMode() {
-  return false;
+  return botConfig.commands?.maintenanceMode === true;
 }
 
 export function getBotMessage(key, replacements = {}) {
