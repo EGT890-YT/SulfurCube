@@ -8,10 +8,14 @@ import {
 } from 'discord.js';
 import { assertHQOwner, BOT_CLIENT_ID, HQ_GUILD_ID } from '../../config/owner.js';
 
-function buildPanel(client, selectedGuildId = null) {
+function buildPanel(client, selectedGuildId = null, requestedPage = 0) {
   const guilds = [...client.guilds.cache.values()].sort((a, b) => a.name.localeCompare(b.name));
-  const selected = selectedGuildId ? client.guilds.cache.get(selectedGuildId) : guilds[0];
-  const options = guilds.slice(0, 25).map((guild) => ({
+  const pageCount = Math.max(1, Math.ceil(guilds.length / 25));
+  const page = Math.min(Math.max(Number(requestedPage) || 0, 0), pageCount - 1);
+  const pageGuilds = guilds.slice(page * 25, page * 25 + 25);
+  const selected = selectedGuildId ? client.guilds.cache.get(selectedGuildId) : pageGuilds[0] ?? guilds[0];
+
+  const options = pageGuilds.map((guild) => ({
     label: guild.name.slice(0, 100),
     value: guild.id,
     description: `${guild.memberCount ?? 0} members • ${guild.id}`.slice(0, 100),
@@ -23,9 +27,8 @@ function buildPanel(client, selectedGuildId = null) {
     .setDescription(
       `**Soverign SMP** is the bot HQ.\n\n` +
       `Servers the bot is currently in: **${guilds.length}**\n` +
-      (selected
-        ? `\n**Selected:** ${selected.name}\nID: ${selected.id}`
-        : '\nNo guild is currently available.')
+      `Page **${page + 1}/${pageCount}**` +
+      (selected ? `\n\n**Selected:** ${selected.name}\nID: ${selected.id}` : '\n\nNo guild is currently available.')
     )
     .setColor('#5865F2');
 
@@ -36,21 +39,24 @@ function buildPanel(client, selectedGuildId = null) {
     .setPlaceholder('Select a guild...')
     .addOptions(options);
 
-  const controls = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`hq_refresh:${selected?.id ?? 'none'}`).setLabel('Refresh').setStyle(ButtonStyle.Secondary).setEmoji('🔄'),
-    new ButtonBuilder().setCustomId(`hq_message:${selected?.id ?? 'none'}`).setLabel('Message').setStyle(ButtonStyle.Primary).setEmoji('💬').setDisabled(!selected),
-    new ButtonBuilder().setCustomId(`hq_leave:${selected?.id ?? 'none'}`).setLabel('Leave').setStyle(ButtonStyle.Danger).setEmoji('🚪').setDisabled(!selected || selected.id === HQ_GUILD_ID),
+  const navigation = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`hq_page:${Math.max(0, page - 1)}:${selected?.id ?? 'none'}`).setLabel('Previous').setStyle(ButtonStyle.Secondary).setEmoji('⬅️').setDisabled(page === 0),
+    new ButtonBuilder().setCustomId(`hq_page:${Math.min(pageCount - 1, page + 1)}:${selected?.id ?? 'none'}`).setLabel('Next').setStyle(ButtonStyle.Secondary).setEmoji('➡️').setDisabled(page >= pageCount - 1),
+    new ButtonBuilder().setCustomId(`hq_refresh:${page}:${selected?.id ?? 'none'}`).setLabel('Refresh').setStyle(ButtonStyle.Secondary).setEmoji('🔄'),
     new ButtonBuilder().setCustomId('hq_ownerrole').setLabel('Owner Role').setStyle(ButtonStyle.Success).setEmoji('👑'),
-    new ButtonBuilder().setLabel('Invite').setStyle(ButtonStyle.Link).setEmoji('🔗').setURL(
-      `https://discord.com/oauth2/authorize?client_id=${BOT_CLIENT_ID}&scope=bot%20applications.commands&permissions=0`
-    )
+    new ButtonBuilder().setLabel('Invite').setStyle(ButtonStyle.Link).setEmoji('🔗').setURL(`https://discord.com/oauth2/authorize?client_id=${BOT_CLIENT_ID}&scope=bot%20applications.commands&permissions=0`)
   );
 
-  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(select), controls] };
+  const actions = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`hq_message:${selected?.id ?? 'none'}`).setLabel('Message').setStyle(ButtonStyle.Primary).setEmoji('💬').setDisabled(!selected),
+    new ButtonBuilder().setCustomId(`hq_leave:${selected?.id ?? 'none'}:${page}`).setLabel('Leave').setStyle(ButtonStyle.Danger).setEmoji('🚪').setDisabled(!selected || selected.id === HQ_GUILD_ID)
+  );
+
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(select), navigation, actions] };
 }
 
-export function createHqPanel(client, selectedGuildId = null) {
-  return buildPanel(client, selectedGuildId);
+export function createHqPanel(client, selectedGuildId = null, page = 0) {
+  return buildPanel(client, selectedGuildId, page);
 }
 
 export default {
