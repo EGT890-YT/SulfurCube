@@ -1,5 +1,5 @@
-import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
-import { assertHQOwner, HQ_GUILD_ID } from '../../config/owner.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { assertHQOwner, BOT_CLIENT_ID, HQ_GUILD_ID } from '../../config/owner.js';
 import { createHqPanel } from '../../commands/Owner/hq.js';
 
 export default [
@@ -15,6 +15,30 @@ export default [
     async execute(interaction, client, args) {
       if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
       return interaction.update(createHqPanel(client, args[1] === 'none' ? null : args[1], Number(args[0]) || 0));
+    },
+  },
+  {
+    name: 'hq_invite',
+    async execute(interaction) {
+      if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
+
+      const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${BOT_CLIENT_ID}&scope=bot%20applications.commands&permissions=0`;
+
+      try {
+        await interaction.user.send(
+          `🔗 **SulfurCube Bot Invite**\n\n${inviteUrl}`
+        );
+
+        return interaction.reply({
+          content: '📨 **Done!** I sent the bot invite to your DMs.',
+          ephemeral: true,
+        });
+      } catch {
+        return interaction.reply({
+          content: '❌ I could not DM you the invite. Please make sure your DMs are open.',
+          ephemeral: true,
+        });
+      }
     },
   },
   {
