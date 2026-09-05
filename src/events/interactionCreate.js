@@ -69,13 +69,13 @@ export default {
               );
             }
 
-            // /bot and /hq are recovery commands. Check the actual Discord
-            // application owner so the application's Client ID is never used
-            // as a user/owner ID.
+            // /bot and /hq are recovery commands. They must still reach their
+            // own owner-only checks while maintenance mode is active.
             const isOwner = isBotOwner(interaction.user.id, client);
-            const isOwnerRecoveryCommand = isOwner && ['bot', 'hq'].includes(interaction.commandName);
+            const isRecoveryCommand = ['bot', 'hq'].includes(interaction.commandName);
+            const isOwnerRecoveryCommand = isOwner && isRecoveryCommand;
 
-            if (isMaintenanceMode() && !isOwner) {
+            if (isMaintenanceMode() && !isOwner && !isRecoveryCommand) {
               throw createError(
                 'Bot is in maintenance mode', ErrorTypes.CONFIGURATION, getBotMessage('maintenanceMode'),
                 withTraceContext({ commandName: interaction.commandName }, interactionTraceContext)
