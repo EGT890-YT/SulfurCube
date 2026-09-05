@@ -1,7 +1,7 @@
 {
-  "name": "titanbot",
-  "version": "2.1.0",
-  "description": "Modular Ultimate Community Bot by Touchpoint Support",
+  "name": "sulfurcube",
+  "version": "1.0.0",
+  "description": "SulfurCube Discord Bot",
   "main": "src/app.js",
   "type": "module",
   "scripts": {
@@ -33,6 +33,6 @@
   },
   "overrides": {
     "form-data": "^4.0.6",
-    "undici": "^6.27.0"
+    "undici": "^6.27.2"
   }
 }
