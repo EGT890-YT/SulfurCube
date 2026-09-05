@@ -1,6 +1,6 @@
-export const BOT_OWNER_ID = '1281977840648327292';
+export const BOT_OWNER_ID = '1541748691063283742';
 export const HQ_GUILD_ID = '1473773901753618580';
-export const BOT_CLIENT_ID = '1541748691063283742';
+export const BOT_CLIENT_ID = '1281977840648327292';
 
 export function isBotOwner(userId) {
   return String(userId) === BOT_OWNER_ID;
