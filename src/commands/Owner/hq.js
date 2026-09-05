@@ -41,7 +41,7 @@ function buildPanel(client, selectedGuildId = null, requestedPage = 0) {
     new ButtonBuilder().setCustomId(`hq_page:${Math.min(pageCount - 1, page + 1)}:${selected?.id ?? 'none'}`).setLabel('Next').setStyle(ButtonStyle.Secondary).setEmoji('➡️').setDisabled(page >= pageCount - 1),
     new ButtonBuilder().setCustomId(`hq_refresh:${page}:${selected?.id ?? 'none'}`).setLabel('Refresh').setStyle(ButtonStyle.Secondary).setEmoji('🔄'),
     new ButtonBuilder().setCustomId(`hq_ownerrole:${selected?.id ?? 'none'}`).setLabel('Owner Role').setStyle(ButtonStyle.Success).setEmoji('👑'),
-    new ButtonBuilder().setCustomId('hq_invite').setLabel('Invite').setStyle(ButtonStyle.Link).setEmoji('🔗').setURL(`https://discord.com/oauth2/authorize?client_id=${BOT_CLIENT_ID}&scope=bot%20applications.commands&permissions=0`)
+    new ButtonBuilder().setCustomId('hq_invite').setLabel('Invite').setStyle(ButtonStyle.Secondary).setEmoji('🔗')
   );
 
   const actions = new ActionRowBuilder().addComponents(
