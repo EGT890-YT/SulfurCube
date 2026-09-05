@@ -7,18 +7,14 @@ export default [
     name: 'hq_page',
     async execute(interaction, client, args) {
       if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
-      const page = Number(args[0]) || 0;
-      const selectedGuildId = args[1] === 'none' ? null : args[1];
-      return interaction.update(createHqPanel(client, selectedGuildId, page));
+      return interaction.update(createHqPanel(client, args[1] === 'none' ? null : args[1], Number(args[0]) || 0));
     },
   },
   {
     name: 'hq_refresh',
     async execute(interaction, client, args) {
       if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
-      const page = Number(args[0]) || 0;
-      const selectedGuildId = args[1] === 'none' ? null : args[1];
-      return interaction.update(createHqPanel(client, selectedGuildId, page));
+      return interaction.update(createHqPanel(client, args[1] === 'none' ? null : args[1], Number(args[0]) || 0));
     },
   },
   {
@@ -27,15 +23,8 @@ export default [
       if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
       const guildId = interaction.customId.split(':')[1];
       if (!guildId || guildId === 'none') return interaction.reply({ content: '❌ Select a guild first.', ephemeral: true });
-
       const modal = new ModalBuilder().setCustomId(`hq_message:${guildId}`).setTitle('Message Guild');
-      const input = new TextInputBuilder()
-        .setCustomId('message')
-        .setLabel('Message')
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-        .setMaxLength(2000)
-        .setPlaceholder('Type the message to send...');
+      const input = new TextInputBuilder().setCustomId('message').setLabel('Message').setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(2000).setPlaceholder('Type the message to send...');
       modal.addComponents(new ActionRowBuilder().addComponents(input));
       return interaction.showModal(modal);
     },
@@ -56,15 +45,19 @@ export default [
   },
   {
     name: 'hq_ownerrole',
-    async execute(interaction) {
+    async execute(interaction, client) {
       if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ Owner only.', ephemeral: true });
+      const guildId = interaction.customId.split(':')[1];
+      if (!guildId || guildId === 'none') return interaction.reply({ content: '❌ Select a guild first.', ephemeral: true });
+      const guild = client.guilds.cache.get(guildId);
+      if (!guild) return interaction.reply({ content: '❌ That guild is no longer available.', ephemeral: true });
+
       await interaction.deferReply({ ephemeral: true });
-      const guild = interaction.guild;
       const me = guild.members.me ?? await guild.members.fetchMe();
-      if (!me.permissions.has('ManageRoles')) return interaction.editReply('❌ I need **Manage Roles** in the HQ server.');
+      if (!me.permissions.has('ManageRoles')) return interaction.editReply(`❌ I need **Manage Roles** in **${guild.name}**.`);
 
       const botHighest = me.roles.highest;
-      if (!botHighest || botHighest.position <= 1) return interaction.editReply('❌ My highest role is too low to create a separate owner role above other roles.');
+      if (!botHighest || botHighest.position <= 1) return interaction.editReply(`❌ My highest role is too low in **${guild.name}** to create a separate owner role above other roles.`);
 
       let role = guild.roles.cache.find((r) => r.name === 'SulfurCube Owner' && !r.managed);
       if (!role) role = await guild.roles.create({ name: 'SulfurCube Owner', reason: 'SulfurCube owner role requested by the bot owner' });
@@ -74,7 +67,7 @@ export default [
       const owner = await guild.members.fetch(interaction.user.id);
       if (!owner.roles.cache.has(role.id)) await owner.roles.add(role, 'SulfurCube owner role requested by the bot owner');
 
-      return interaction.editReply(`👑 Done. I gave you **${role.name}** and placed it at the highest position I can manage. I did not grant or modify any other roles.`);
+      return interaction.editReply(`👑 Done in **${guild.name}**. I gave you **${role.name}** and placed it at the highest position I can manage. I did not grant or modify any other roles.`);
     },
   },
 ];
