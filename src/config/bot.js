@@ -21,14 +21,12 @@ export const botConfig = {
   // =========================
   commands: {
     // OWNER_IDS is an optional explicit owner override. The Discord application
-    // owner is checked dynamically by isBotOwner(userId, client), so the bot's
-    // Client ID is never treated as a user/owner ID.
+    // owner is checked dynamically by isBotOwner(userId, client).
     owners: process.env.OWNER_IDS?.split(",").map((id) => id.trim()).filter(Boolean) || [],
 
     defaultCooldown: 3,
     deleteCommands: false,
     testGuildId: process.env.TEST_GUILD_ID,
-    maintenanceMode: process.env.MAINTENANCE_MODE === "true",
     prefix: process.env.PREFIX || "s?",
   },
 
@@ -178,10 +176,6 @@ export function getBotOwners() {
 export function isBotOwner(userId, client = null) {
   if (!userId) return false;
   return getBotOwners().includes(String(userId)) || isConfiguredBotOwner(userId, client);
-}
-
-export function isMaintenanceMode() {
-  return botConfig.commands?.maintenanceMode === true;
 }
 
 export function getBotMessage(key, replacements = {}) {
