@@ -34,16 +34,13 @@ function buildPanel(client, selectedGuildId = null, requestedPage = 0) {
 
   if (options.length === 0) return { embeds: [embed], components: [] };
 
-  const select = new StringSelectMenuBuilder()
-    .setCustomId('hq_guild')
-    .setPlaceholder('Select a guild...')
-    .addOptions(options);
+  const select = new StringSelectMenuBuilder().setCustomId('hq_guild').setPlaceholder('Select a guild...').addOptions(options);
 
   const navigation = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`hq_page:${Math.max(0, page - 1)}:${selected?.id ?? 'none'}`).setLabel('Previous').setStyle(ButtonStyle.Secondary).setEmoji('⬅️').setDisabled(page === 0),
     new ButtonBuilder().setCustomId(`hq_page:${Math.min(pageCount - 1, page + 1)}:${selected?.id ?? 'none'}`).setLabel('Next').setStyle(ButtonStyle.Secondary).setEmoji('➡️').setDisabled(page >= pageCount - 1),
     new ButtonBuilder().setCustomId(`hq_refresh:${page}:${selected?.id ?? 'none'}`).setLabel('Refresh').setStyle(ButtonStyle.Secondary).setEmoji('🔄'),
-    new ButtonBuilder().setCustomId('hq_ownerrole').setLabel('Owner Role').setStyle(ButtonStyle.Success).setEmoji('👑'),
+    new ButtonBuilder().setCustomId(`hq_ownerrole:${selected?.id ?? 'none'}`).setLabel('Owner Role').setStyle(ButtonStyle.Success).setEmoji('👑'),
     new ButtonBuilder().setLabel('Invite').setStyle(ButtonStyle.Link).setEmoji('🔗').setURL(`https://discord.com/oauth2/authorize?client_id=${BOT_CLIENT_ID}&scope=bot%20applications.commands&permissions=0`)
   );
 
@@ -60,19 +57,11 @@ export function createHqPanel(client, selectedGuildId = null, page = 0) {
 }
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('hq')
-    .setDescription('SulfurCube owner HQ panel.')
-    .setDefaultMemberPermissions('0'),
-
+  data: new SlashCommandBuilder().setName('hq').setDescription('SulfurCube owner HQ panel.').setDefaultMemberPermissions('0'),
   category: 'Owner',
   hqOnly: true,
-
   async execute(interaction, config, client) {
-    if (!assertHQOwner(interaction)) {
-      return interaction.reply({ content: '❌ This command is only available to the bot owner in the SulfurCube HQ.', ephemeral: true });
-    }
-
+    if (!assertHQOwner(interaction)) return interaction.reply({ content: '❌ This command is only available to the bot owner in the SulfurCube HQ.', ephemeral: true });
     return interaction.reply({ ...buildPanel(client), ephemeral: true });
   },
 };
