@@ -84,7 +84,13 @@ export default {
               );
             }
 
-            if (isMaintenanceMode() && !isBotOwner(interaction.user.id)) {
+            // /bot and /hq are owner recovery commands. They must remain usable
+            // even when maintenance mode or a guild-level bot shutdown is active.
+            const isOwnerRecoveryCommand =
+              isBotOwner(interaction.user.id) &&
+              ['bot', 'hq'].includes(interaction.commandName);
+
+            if (isMaintenanceMode() && !isBotOwner(interaction.user.id) && !isOwnerRecoveryCommand) {
               throw createError(
                 'Bot is in maintenance mode',
                 ErrorTypes.CONFIGURATION,
@@ -93,7 +99,7 @@ export default {
               );
             }
 
-            if (!isCommandCategoryEnabled(command.category)) {
+            if (!isOwnerRecoveryCommand && !isCommandCategoryEnabled(command.category)) {
               throw createError(
                 `Feature disabled for category ${command.category}`,
                 ErrorTypes.CONFIGURATION,
@@ -120,7 +126,9 @@ export default {
               client.cooldowns.set(cooldownKey, Date.now() + defaultCooldownSec * 1000);
             }
 
-            const abuseProtection = await enforceAbuseProtection(interaction, command, interaction.commandName);
+            const abuseProtection = isOwnerRecoveryCommand
+              ? { allowed: true }
+              : await enforceAbuseProtection(interaction, command, interaction.commandName);
             if (!abuseProtection.allowed) {
               const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
               throw createError(
@@ -142,7 +150,7 @@ export default {
             if (interaction.guild) {
               guildConfig = await getGuildConfig(client, interaction.guild.id, interactionTraceContext);
               const accessKey = resolveSlashAccessKey(interaction);
-              if (!(await isCommandEnabled(client, interaction.guild.id, accessKey, command.category))) {
+              if (!isOwnerRecoveryCommand && !(await isCommandEnabled(client, interaction.guild.id, accessKey, command.category))) {
                 throw createError(
                   `Command ${accessKey} is disabled in this guild`,
                   ErrorTypes.CONFIGURATION,
@@ -381,7 +389,8 @@ export default {
           } catch (error) {
             await handleInteractionError(interaction, error, withTraceContext({
               type: 'select_menu',
-              customId: interaction.customId
+              customId: interaction.customId,
+              handler: 'general'
             }, interactionTraceContext));
           }
         } else if (interaction.isModalSubmit()) {
@@ -417,7 +426,6 @@ export default {
 
           if (!modal) {
             if (!interaction.customId.includes(':')) {
-
               return;
             }
 
@@ -454,18 +462,11 @@ export default {
           await handleInteractionError(interaction, error, withTraceContext({
             type: 'interaction',
             commandName: interaction.commandName,
-            customId: interaction.customId,
-            source: 'interactionCreate.unhandled'
           }, interactionTraceContext));
-        } catch (replyError) {
-          logger.error('Failed to send fallback error response:', {
-            event: 'interaction.error_response_failed',
-            errorCode: ErrorCodes.INTERACTION_RESPONSE_FAILED,
-            error: replyError,
-            traceId: interactionTraceContext.traceId
-          });
+        } catch (responseError) {
+          logger.error('Failed to send interaction error response:', responseError);
         }
       }
     });
-  }
+  },
 };
