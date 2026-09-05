@@ -1,4 +1,6 @@
-export const BOT_OWNER_ID = process.env.BOT_OWNER_ID?.trim() || null;
+// SulfurCube owner/client identifiers.
+// 1281977840648327292 is the configured owner/client ID provided by EGT.
+export const BOT_OWNER_ID = '1281977840648327292';
 export const HQ_GUILD_ID = '1473773901753618580';
 export const BOT_CLIENT_ID = '1281977840648327292';
 export const DISCORD_BOT_ID = '1541748691063283742';
@@ -7,7 +9,10 @@ export function isBotOwner(userId, client = null) {
   if (!userId) return false;
 
   const normalizedUserId = String(userId);
-  if (BOT_OWNER_ID && normalizedUserId === BOT_OWNER_ID) return true;
+
+  // Explicit configured owner ID takes priority so recovery commands still
+  // work even if Discord application owner metadata has not been populated.
+  if (normalizedUserId === BOT_OWNER_ID) return true;
 
   const applicationOwner = client?.application?.owner;
   if (!applicationOwner) return false;
