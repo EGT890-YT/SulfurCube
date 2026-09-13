@@ -27,10 +27,9 @@ export default {
 
     const attacker = interaction.member;
     const targetUser = interaction.options.getUser("person");
-    const type = interaction.options.getString("type");
+    const rawType = interaction.options.getString("type") ?? interaction.options.get("type")?.value;
+    const type = typeof rawType === 'string' ? rawType.trim().toLowerCase() : null;
 
-    // Resolve the target from the guild member cache when possible, then
-    // fetch it when Discord has not cached the member yet.
     let target = interaction.options.getMember("person");
     if (!target && targetUser && interaction.guild) {
       target = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
@@ -58,14 +57,12 @@ export default {
       return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }
 
-    // The immortal user is protected from every attack except Nibble.
     if (targetUser.id === IMMORTAL_USER_ID) {
       if (type !== 'nibble') {
         const embed = warningEmbed("🛡️ Attack Blocked", `**${targetUser.displayName}** is protected from attacks. Nice try 😭`);
         return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       }
 
-      // Only this specific user may Nibble the immortal user.
       if (interaction.user.id !== NIBBLE_ALLOWED_USER_ID) {
         const embed = warningEmbed("🛡️ Nibble Blocked", `Only <@${NIBBLE_ALLOWED_USER_ID}> can nibble **${targetUser.displayName}**.`);
         return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
