@@ -14,6 +14,7 @@ import { createEmbed } from '../utils/embeds.js';
 import { isCommandEnabled } from '../services/commandAccessService.js';
 import {
   getCountingGameConfig,
+  saveCountingGameConfig,
   isValidCountingMessage,
   recordCorrectCount,
 } from '../services/countingGameService.js';
