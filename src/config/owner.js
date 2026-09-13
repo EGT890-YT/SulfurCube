@@ -4,15 +4,20 @@
 export const HQ_GUILD_ID = '1473773901753618580';
 export const BOT_CLIENT_ID = '1281977840648327292';
 export const DISCORD_BOT_ID = '1541748691063283742';
+export const BOT_OWNER_ID = '1281977840648327292';
 
 export function isBotOwner(userId, client = null) {
   if (!userId) return false;
 
   const normalizedUserId = String(userId);
+
+  // Explicit owner ID configured for this bot.
+  if (normalizedUserId === BOT_OWNER_ID) return true;
+
   const applicationOwner = client?.application?.owner;
 
-  // Discord's application owner is the actual Discord account that owns the bot.
-  // Do not confuse the application/client ID or bot ID with the owner's user ID.
+  // Discord's application owner is also accepted as the owner. This keeps
+  // ownership working if the application is transferred in Discord later.
   if (!applicationOwner) return false;
 
   if (applicationOwner.user?.id) {
