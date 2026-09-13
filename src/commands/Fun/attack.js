@@ -26,8 +26,15 @@ export default {
     await InteractionHelper.safeDefer(interaction);
 
     const attacker = interaction.member;
-    const target = interaction.options.getMember("person");
+    const targetUser = interaction.options.getUser("person");
     const type = interaction.options.getString("type");
+
+    // Resolve the target from the guild member cache when possible, then
+    // fetch it when Discord has not cached the member yet.
+    let target = interaction.options.getMember("person");
+    if (!target && targetUser && interaction.guild) {
+      target = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+    }
 
     const attacks = {
       slap: { emoji: "👋", name: "Slap", verb: "slaps", search: "slap" },
@@ -41,37 +48,42 @@ export default {
 
     const attack = attacks[type];
 
-    if (!target || !attack) {
+    if (!targetUser || !attack) {
       const embed = warningEmbed("❌ Wrong Usage", `Please provide a valid person and attack type.\n\n**Available attack types:**\n👋 **Slap**\n👊 **Punch**\n🔨 **Bonk**\n🦷 **Bite**\n🦵 **Kick**\n🖕 **Finger**\n🫦 **Nibble**`);
       return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }
 
+    if (!target) {
+      const embed = warningEmbed("❌ Invalid Target", "I couldn't find that person in this server.");
+      return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+    }
+
     // The immortal user is protected from every attack except Nibble.
-    if (target.id === IMMORTAL_USER_ID) {
+    if (targetUser.id === IMMORTAL_USER_ID) {
       if (type !== 'nibble') {
-        const embed = warningEmbed("🛡️ Attack Blocked", `**${target.displayName}** is protected from attacks. Nice try 😭`);
+        const embed = warningEmbed("🛡️ Attack Blocked", `**${targetUser.displayName}** is protected from attacks. Nice try 😭`);
         return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       }
 
       // Only this specific user may Nibble the immortal user.
-      if (attacker.id !== NIBBLE_ALLOWED_USER_ID) {
-        const embed = warningEmbed("🛡️ Nibble Blocked", `Only <@${NIBBLE_ALLOWED_USER_ID}> can nibble **${target.displayName}**.`);
+      if (interaction.user.id !== NIBBLE_ALLOWED_USER_ID) {
+        const embed = warningEmbed("🛡️ Nibble Blocked", `Only <@${NIBBLE_ALLOWED_USER_ID}> can nibble **${targetUser.displayName}**.`);
         return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       }
     }
 
-    if (attacker.id === target.id) {
+    if (attacker.id === targetUser.id) {
       const embed = warningEmbed("💥 Invalid Target", `**${attacker.displayName}**, you can't attack yourself!`);
       return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }
 
-    if (target.user.bot) {
+    if (targetUser.bot) {
       const embed = warningEmbed("🤖 Invalid Target", "You can't attack a bot! Pick a real person instead.");
       return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }
 
-    const attackerName = attacker.nickname || attacker.user.displayName;
-    const targetName = target.nickname || target.user.displayName;
+    const attackerName = attacker.nickname || interaction.user.displayName;
+    const targetName = target.nickname || targetUser.displayName;
 
     try {
       const apiUrl = `https://gifsnap.com/api/v1/gifs/search?q=${encodeURIComponent(attack.search)}&page=1&limit=25`;
