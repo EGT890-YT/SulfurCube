@@ -22,7 +22,20 @@ export default {
         ),
     )
     .addSubcommand((sub) => sub.setName('off').setDescription('Disable SulfurCube in this server only.'))
-    .addSubcommand((sub) => sub.setName('maintenance').setDescription('Put SulfurCube into server-wide maintenance mode.'))
+    .addSubcommand((sub) =>
+      sub
+        .setName('maintenance')
+        .setDescription('Turn maintenance mode on or off.')
+        .addStringOption((option) =>
+          option.setName('state')
+            .setDescription('Choose whether maintenance mode should be on or off.')
+            .setRequired(true)
+            .addChoices(
+              { name: 'On', value: 'on' },
+              { name: 'Off', value: 'off' },
+            ),
+        ),
+    )
     .addSubcommand((sub) => sub.setName('testing').setDescription('Enable testing mode while maintenance is active.'))
     .addSubcommand((sub) => sub.setName('status').setDescription('Show the current bot status.'))
     .setDefaultMemberPermissions('0'),
@@ -44,18 +57,26 @@ export default {
     }
 
     if (action === 'maintenance') {
-      botConfig.commands.maintenanceMode = true;
+      const state = interaction.options.getString('state', true);
+
+      if (state === 'on') {
+        botConfig.commands.maintenanceMode = true;
+        botConfig.commands.testingMode = false;
+        return interaction.reply({ content: '🛠️ **SulfurCube maintenance mode is now ON.**\n\nNormal commands are blocked server-wide. The `/bot` and `/hq` recovery commands remain available.', ephemeral: true });
+      }
+
+      botConfig.commands.maintenanceMode = false;
       botConfig.commands.testingMode = false;
-      return interaction.reply({ content: '🛠️ **SulfurCube is now in maintenance mode.**\n\nThe bot is unavailable to normal users server-wide. The `/bot` recovery command remains available.', ephemeral: true });
+      return interaction.reply({ content: '🟢 **SulfurCube maintenance mode is now OFF.**\n\nNormal commands are available again.', ephemeral: true });
     }
 
     if (action === 'testing') {
       if (botConfig.commands.maintenanceMode !== true) {
-        return interaction.reply({ content: '❌ **Testing mode is only available while maintenance mode is active.**\n\nRun `/bot maintenance` first.', ephemeral: true });
+        return interaction.reply({ content: '❌ **Testing mode is only available while maintenance mode is active.**\n\nRun `/bot maintenance On` first.', ephemeral: true });
       }
       botConfig.commands.maintenanceMode = false;
       botConfig.commands.testingMode = true;
-      return interaction.reply({ content: '🧪 **SulfurCube is now in testing mode.**\n\nNormal commands are available again for testing. Use `/bot on` with **All servers** to fully restore everything.', ephemeral: true });
+      return interaction.reply({ content: '🧪 **SulfurCube is now in testing mode.**\n\nNormal commands are available again for testing. Use `/bot maintenance Off` or `/bot on` with **All servers** when you are done.', ephemeral: true });
     }
 
     if (action === 'on') {
