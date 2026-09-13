@@ -73,7 +73,13 @@ async function handlePrefixCommand(message, client) {
       return; 
     }
 
-    if (isMaintenanceMode() && !isBotOwner(message.author.id)) {
+    // /bot and /hq are recovery commands and must still reach their own
+    // owner-only checks while maintenance mode is active.
+    const isRecoveryCommand = ['bot', 'hq'].includes(resolvedCommandName);
+    const isOwner = isBotOwner(message.author.id, client);
+    const isOwnerRecoveryCommand = isOwner && isRecoveryCommand;
+
+    if (isMaintenanceMode() && !isOwner && !isRecoveryCommand) {
       await message.channel.send({
         embeds: [createEmbed({
           title: 'Maintenance Mode',
@@ -84,7 +90,7 @@ async function handlePrefixCommand(message, client) {
       return;
     }
 
-    if (!isCommandCategoryEnabled(command.category)) {
+    if (!isOwnerRecoveryCommand && !isCommandCategoryEnabled(command.category)) {
       await message.channel.send({
         embeds: [createEmbed({
           title: 'Feature Disabled',
@@ -108,7 +114,7 @@ async function handlePrefixCommand(message, client) {
       return;
     }
 
-    if (!(await isCommandEnabled(client, message.guild.id, resolvePrefixAccessKey(command.data, args), command.category))) {
+    if (!isOwnerRecoveryCommand && !(await isCommandEnabled(client, message.guild.id, resolvePrefixAccessKey(command.data, args), command.category))) {
       const embed = createEmbed({
         title: 'Command Disabled',
         description: 'This command has been disabled for this server.',
@@ -122,11 +128,13 @@ async function handlePrefixCommand(message, client) {
       guildId: message.guild.id,
       user: message.author,
     };
-    const abuseProtection = await enforceAbuseProtection(
-      mockInteractionForProtection,
-      command,
-      resolvedCommandName,
-    );
+    const abuseProtection = isOwnerRecoveryCommand
+      ? { allowed: true }
+      : await enforceAbuseProtection(
+        mockInteractionForProtection,
+        command,
+        resolvedCommandName,
+      );
     if (!abuseProtection.allowed) {
       const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
       const embed = createEmbed({
