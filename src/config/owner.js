@@ -1,10 +1,10 @@
 // SulfurCube application identifiers.
-// These are intentionally hard-coded so the bot does not depend on environment
-// variables for its Discord application/bot configuration.
+// The owner ID is the Discord account allowed to use owner/HQ controls.
+// The client/bot ID is the Discord application/bot account ID.
 export const HQ_GUILD_ID = '1473773901753618580';
-export const BOT_CLIENT_ID = '1281977840648327292';
-export const DISCORD_BOT_ID = '1541748691063283742';
 export const BOT_OWNER_ID = '1281977840648327292';
+export const BOT_CLIENT_ID = '1541748691063283742';
+export const DISCORD_BOT_ID = '1541748691063283742';
 
 export function isBotOwner(userId, client = null) {
   if (!userId) return false;
