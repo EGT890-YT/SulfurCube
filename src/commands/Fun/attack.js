@@ -1,7 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { BOT_OWNER_ID } from '../../config/owner.js';
+
+const IMMORTAL_USER_ID = '1281977840648327292';
+const NIBBLE_ALLOWED_USER_ID = '1524531035394805860';
 
 export default {
   data: new SlashCommandBuilder()
@@ -14,7 +16,8 @@ export default {
       { name: "🔨 Bonk", value: "bonk" },
       { name: "🦷 Bite", value: "bite" },
       { name: "🦵 Kick", value: "kick" },
-      { name: "🖕 Finger", value: "finger" }
+      { name: "🖕 Finger", value: "finger" },
+      { name: "🫦 Nibble", value: "nibble" }
     )),
 
   category: 'Fun',
@@ -32,20 +35,29 @@ export default {
       bonk: { emoji: "🔨", name: "Bonk", verb: "bonks", search: "bonk" },
       bite: { emoji: "🦷", name: "Bite", verb: "bites", search: "bite" },
       kick: { emoji: "🦵", name: "Kick", verb: "kicks", search: "kick" },
-      finger: { emoji: "🖕", name: "Finger", verb: "gives the finger to", search: "middle finger" }
+      finger: { emoji: "🖕", name: "Finger", verb: "gives the finger to", search: "middle finger" },
+      nibble: { emoji: "🫦", name: "Nibble", verb: "nibbles", search: "nibble" }
     };
 
     const attack = attacks[type];
 
     if (!target || !attack) {
-      const embed = warningEmbed("❌ Wrong Usage", `Please provide a valid person and attack type.\n\n**Available attack types:**\n👋 **Slap**\n👊 **Punch**\n🔨 **Bonk**\n🦷 **Bite**\n🦵 **Kick**\n🖕 **Finger**`);
+      const embed = warningEmbed("❌ Wrong Usage", `Please provide a valid person and attack type.\n\n**Available attack types:**\n👋 **Slap**\n👊 **Punch**\n🔨 **Bonk**\n🦷 **Bite**\n🦵 **Kick**\n🖕 **Finger**\n🫦 **Nibble**`);
       return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     }
 
-    // The bot owner is attack-immune. This does not affect /hug, /ship, /tickle, etc.
-    if (target.id === BOT_OWNER_ID) {
-      const embed = warningEmbed("🛡️ Attack Blocked", `**${target.displayName}** is protected from attacks. Nice try 😭`);
-      return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+    // The immortal user is protected from every attack except Nibble.
+    if (target.id === IMMORTAL_USER_ID) {
+      if (type !== 'nibble') {
+        const embed = warningEmbed("🛡️ Attack Blocked", `**${target.displayName}** is protected from attacks. Nice try 😭`);
+        return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+      }
+
+      // Only this specific user may Nibble the immortal user.
+      if (attacker.id !== NIBBLE_ALLOWED_USER_ID) {
+        const embed = warningEmbed("🛡️ Nibble Blocked", `Only <@${NIBBLE_ALLOWED_USER_ID}> can nibble **${target.displayName}**.`);
+        return InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+      }
     }
 
     if (attacker.id === target.id) {
