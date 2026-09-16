@@ -13,4 +13,8 @@ export const GUILD_CONFIG_DEFAULTS = {
     disabledCommands: {},
     disabledCategories: {},
     botDisabled: false,
+    honeypot: {
+        enabled: false,
+        channelId: null,
+    },
 };
