@@ -17,12 +17,12 @@ function buildHoneypotEmbed() {
     .setTitle('🚨🚨🚨 DO NOT TYPE HERE 🚨🚨🚨')
     .setDescription(
       '# ⛔ DO NOT TYPE HERE ⛔\n\n' +
-      'This channel is used to catch spam and malicious bots.\n\n' +
-      'If you are a normal member, **do not send any message in this channel**. Everyone else who types here will be automatically handled by SulfurCube.'
+      'Please do not send messages in this channel.\n\n' +
+      'Messages sent here will be automatically handled by SulfurCube.'
     )
     .addFields({
-      name: '🍯 What is this?',
-      value: 'It is a trap channel. Legitimate members have no reason to post here, so messages can be treated as a strong signal that an account is unwanted.',
+      name: '⚠️ Important',
+      value: 'There is no reason to send a message here. Please use the appropriate channels for normal conversation.',
     })
     .setFooter({ text: 'SulfurCube • Channel: BotBoi' });
 }
@@ -83,8 +83,8 @@ export default {
       const channel = await interaction.guild.channels.create({
         name: HONEYPOT_CHANNEL_NAME,
         type: ChannelType.GuildText,
-        topic: '🍯 SulfurCube botboi trap — DO NOT TYPE HERE.',
-        reason: 'SulfurCube botboi trap setup',
+        topic: 'SulfurCube BotBoi — DO NOT TYPE HERE.',
+        reason: 'SulfurCube BotBoi setup',
         permissionOverwrites: [
           {
             id: interaction.guild.roles.everyone.id,
@@ -116,7 +116,7 @@ export default {
       });
 
       return interaction.reply({
-        content: `🍯 Botboi trap created: ${channel}\n**Channel name:** \`botboi\``,
+        content: `🍯 BotBoi created: ${channel}\n**Channel name:** \`botboi\``,
         ephemeral: true,
       });
     }
@@ -135,11 +135,11 @@ export default {
       });
 
       if (channel) {
-        await channel.delete('SulfurCube botboi trap removed').catch(() => {});
+        await channel.delete('SulfurCube BotBoi removed').catch(() => {});
       }
 
       return interaction.reply({
-        content: '🍯 Botboi trap removed.',
+        content: '🍯 BotBoi removed.',
         ephemeral: true,
       });
     }
