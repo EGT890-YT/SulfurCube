@@ -1,4 +1,4 @@
-import { Events } from 'discord.js';
+import { Events, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getLevelingConfig, getUserLevelData } from '../services/leveling/leveling.js';
 import { addXp } from '../services/leveling/xpSystem.js';
@@ -21,12 +21,23 @@ import {
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
+const HONEYPOT_DELETE_SECONDS = 7 * 24 * 60 * 60;
 
 export default {
   name: Events.MessageCreate,
   async execute(message, client) {
     try {
-      if (message.author.bot || !message.guild) return;
+      if (!message.guild) return;
+
+      // The bot itself must never trigger its own honeypot.
+      if (message.author.id === client.user?.id) return;
+
+      const honeypotTriggered = await handleHoneypot(message, client);
+      if (honeypotTriggered) {
+        return;
+      }
+
+      if (message.author.bot) return;
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
 
@@ -43,6 +54,56 @@ export default {
     }
   }
 };
+
+async function handleHoneypot(message, client) {
+  try {
+    const guildConfig = await getGuildConfig(client, message.guild.id);
+    const honeypot = guildConfig?.honeypot;
+
+    if (!honeypot?.enabled || !honeypot.channelId || message.channel.id !== honeypot.channelId) {
+      return false;
+    }
+
+    const member = message.member ?? await message.guild.members.fetch(message.author.id).catch(() => null);
+
+    // Administrators are explicitly exempt and can type in botboi normally.
+    if (member?.permissions.has(PermissionFlagsBits.Administrator)) {
+      return false;
+    }
+
+    // Remove the triggering message immediately even if the ban later fails.
+    await message.delete().catch(() => {});
+
+    if (!member) {
+      logger.warn(`Honeypot trigger could not resolve member ${message.author.id} in ${message.guild.id}`);
+      return true;
+    }
+
+    const botMember = message.guild.members.me;
+    if (!botMember?.permissions.has(PermissionFlagsBits.BanMembers)) {
+      logger.error(`Honeypot cannot ban ${message.author.tag}: SulfurCube lacks Ban Members permission in ${message.guild.name}.`);
+      return true;
+    }
+
+    // Discord's role hierarchy still applies. Do not attempt to ban a member
+    // whose highest role is equal to or higher than the bot's highest role.
+    if (member.roles.highest.position >= botMember.roles.highest.position) {
+      logger.warn(`Honeypot could not ban ${message.author.tag}: member role is equal to or above SulfurCube's highest role.`);
+      return true;
+    }
+
+    await message.guild.members.ban(member, {
+      deleteMessageSeconds: HONEYPOT_DELETE_SECONDS,
+      reason: 'SulfurCube Honeypot trigger',
+    });
+
+    logger.warn(`🍯 Honeypot triggered in ${message.guild.name}: permanently banned ${message.author.tag} (${message.author.id}) and requested deletion of their recent messages.`);
+    return true;
+  } catch (error) {
+    logger.error(`Error handling honeypot trigger in ${message.guild?.name || 'unknown guild'}:`, error);
+    return true;
+  }
+}
 
 async function handlePrefixCommand(message, client) {
   try {
