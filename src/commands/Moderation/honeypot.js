@@ -33,7 +33,7 @@ function buildHoneypotComponents() {
       new ButtonBuilder()
         .setCustomId('honeypot_info')
         .setLabel('Why is this here?')
-        .setEmoji('🍯')
+        .setEmoji('❓')
         .setStyle(ButtonStyle.Secondary),
     ),
   ];
