@@ -24,7 +24,7 @@ function buildHoneypotEmbed() {
       name: '🍯 What is this?',
       value: 'It is a trap channel. Legitimate members have no reason to post here, so messages can be treated as a strong signal that an account is unwanted.',
     })
-    .setFooter({ text: 'SulfurCube • Channel: botboi' });
+    .setFooter({ text: 'SulfurCube • Channel: BotBoi' });
 }
 
 function buildHoneypotComponents() {
