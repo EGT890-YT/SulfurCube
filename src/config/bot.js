@@ -27,7 +27,7 @@ export const botConfig = {
     defaultCooldown: 3,
     deleteCommands: false,
     testGuildId: process.env.TEST_GUILD_ID,
-    maintenanceMode: false,
+    maintenanceMode: true,
     testingMode: false,
     prefix: process.env.PREFIX || "s?",
   },
