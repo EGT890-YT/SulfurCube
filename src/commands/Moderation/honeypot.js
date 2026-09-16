@@ -22,7 +22,7 @@ function buildHoneypotEmbed() {
     )
     .addFields({
       name: '⚠️ Important',
-      value: 'There is no reason to send a message here. Please use the appropriate channels for normal conversation.',
+      value: 'This is a **trapchannel**. There is no reason to send a message here. Please use the appropriate channels for normal conversation.',
     })
     .setFooter({ text: 'SulfurCube • Channel: BotBoi' });
 }
