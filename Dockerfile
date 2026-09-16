@@ -1,8 +1,13 @@
 FROM node:20-alpine
 
+ARG GIT_COMMIT_SHA=""
+ARG GIT_COMMIT_MESSAGE=""
+
 WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
+ENV SULFURCUBE_GIT_COMMIT=${GIT_COMMIT_SHA}
+ENV SULFURCUBE_GIT_COMMIT_MESSAGE=${GIT_COMMIT_MESSAGE}
 
 COPY package*.json ./
 RUN npm install --omit=dev
