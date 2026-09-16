@@ -5,17 +5,17 @@ export default {
   async execute(interaction) {
     const embed = new EmbedBuilder()
       .setColor('#ED4245')
-      .setTitle('🍯 Why is this channel here?')
+      .setTitle('❓ Why is this channel here?')
       .setDescription(
-        '**botboi is a honeypot channel.**\n\n' +
-        'Normal members should have absolutely no reason to type here. The channel exists to catch spam, raid accounts and unwanted bots that automatically post in channels they discover.\n\n' +
+        '**botboi is a trapchannel.**\n\n' +
+        'This channel is intentionally kept separate from normal conversation and should not be used for regular messages.\n\n' +
         '### 🚨 What happens if I type here?\n' +
-        'If you are **not an Administrator**, SulfurCube will treat your message as a honeypot trigger and attempt to permanently ban you while deleting your recent messages.\n\n' +
+        'If you are **not an Administrator**, SulfurCube will automatically handle the message and take the appropriate moderation action.\n\n' +
         '### 👑 Administrators\n' +
         'Members with the **Administrator** permission are exempt and can use this channel normally.\n\n' +
         '**If you are not an admin: DO NOT TYPE HERE.**'
       )
-      .setFooter({ text: 'SulfurCube Honeypot' });
+      .setFooter({ text: 'SulfurCube • BotBoi' });
 
     return interaction.reply({
       embeds: [embed],
