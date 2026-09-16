@@ -66,7 +66,7 @@ function buildPanel(client, selectedIndex = 0) {
       new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId('hq_guild')
-          .setPlaceholder('Select a server')
+          .setPlaceholder('🌐 Select a server')
           .addOptions(options),
       ),
     );
@@ -75,40 +75,40 @@ function buildPanel(client, selectedIndex = 0) {
   const buttons = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('hq_previous')
-      .setLabel('Previous')
+      .setLabel('◀️ Previous')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(index <= 0),
     new ButtonBuilder()
       .setCustomId('hq_next')
-      .setLabel('Next')
+      .setLabel('Next ▶️')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(index >= Math.min(guilds.length - 1, 24)),
     new ButtonBuilder()
       .setCustomId('hq_refresh')
-      .setLabel('Refresh')
+      .setLabel('🔄 Refresh')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('hq_owner_role')
-      .setLabel('Owner Role')
+      .setLabel('👑 Owner Role')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('hq_invite')
-      .setLabel('Invite')
+      .setLabel('🔗 Invite')
       .setStyle(ButtonStyle.Secondary),
   );
 
   const controls = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('hq_server_on').setLabel('Server ON').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('hq_server_off').setLabel('Server OFF').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('hq_bots_on').setLabel('All Bots ON').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('hq_maintenance_on').setLabel('Maintenance ON').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('hq_maintenance_off').setLabel('Maintenance OFF').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('hq_server_on').setLabel('🟢 Server ON').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('hq_server_off').setLabel('🔴 Server OFF').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('hq_bots_on').setLabel('🤖 All Bots ON').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('hq_maintenance_on').setLabel('🛠️ Maintenance ON').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('hq_maintenance_off').setLabel('🟢 Maintenance OFF').setStyle(ButtonStyle.Success),
   );
 
   const actions = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('hq_testing').setLabel('Testing Mode').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('hq_message').setLabel('Message').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('hq_leave').setLabel('Leave').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('hq_testing').setLabel('🧪 Testing Mode').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('hq_message').setLabel('💬 Message').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('hq_leave').setLabel('🚪 Leave').setStyle(ButtonStyle.Danger),
   );
 
   rows.push(buttons, controls, actions);
