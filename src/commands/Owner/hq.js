@@ -4,6 +4,7 @@ import {
   ButtonStyle,
   EmbedBuilder,
   SlashCommandBuilder,
+  StringSelectMenuBuilder,
 } from 'discord.js';
 import { assertHQOwner } from '../../config/owner.js';
 import botConfig from '../../config/bot.js';
@@ -16,12 +17,13 @@ function safeText(value, fallback = 'Unnamed Server', maxLength = 100) {
   return (text || fallback).slice(0, maxLength);
 }
 
-function buildPanel(client) {
+function buildPanel(client, selectedIndex = 0) {
   const guilds = [...client.guilds.cache.values()].sort((a, b) =>
     safeText(a.name).localeCompare(safeText(b.name))
   );
 
-  const selectedGuild = guilds[0] ?? null;
+  const index = Math.min(Math.max(selectedIndex, 0), Math.max(guilds.length - 1, 0));
+  const selectedGuild = guilds[index] ?? null;
 
   const embed = new EmbedBuilder()
     .setTitle('🛠️ SulfurCube HQ')
@@ -51,17 +53,36 @@ function buildPanel(client) {
     });
   }
 
+  const rows = [];
+
+  if (guilds.length > 0) {
+    const options = guilds.slice(0, 25).map((guild, guildIndex) => ({
+      label: safeText(guild.name),
+      value: guild.id,
+      description: `Server ${guildIndex + 1} • ${guild.memberCount ?? '?'} members`.slice(0, 100),
+    }));
+
+    rows.push(
+      new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId('hq_guild')
+          .setPlaceholder('Select a server')
+          .addOptions(options),
+      ),
+    );
+  }
+
   const buttons = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('hq_previous')
       .setLabel('Previous')
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(true),
+      .setDisabled(index <= 0),
     new ButtonBuilder()
       .setCustomId('hq_next')
       .setLabel('Next')
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(true),
+      .setDisabled(index >= Math.min(guilds.length - 1, 24)),
     new ButtonBuilder()
       .setCustomId('hq_refresh')
       .setLabel('Refresh')
@@ -90,9 +111,11 @@ function buildPanel(client) {
     new ButtonBuilder().setCustomId('hq_leave').setLabel('Leave').setStyle(ButtonStyle.Danger),
   );
 
+  rows.push(buttons, controls, actions);
+
   return {
     embeds: [embed],
-    components: [buttons, controls, actions],
+    components: rows,
   };
 }
 
