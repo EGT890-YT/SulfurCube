@@ -9,8 +9,20 @@ import {
 import { assertHQOwner, HQ_GUILD_ID } from '../../config/owner.js';
 import botConfig from '../../config/bot.js';
 
+function safeComponentText(value, fallback = 'Unnamed Server', maxLength = 100) {
+  const cleaned = String(value ?? '')
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
+    .replace(/[\r\n]+/g, ' ')
+    .trim();
+
+  const chars = Array.from(cleaned).slice(0, maxLength).join('').trim();
+  return chars || fallback;
+}
+
 function buildPanel(client, selectedGuildId = null, requestedPage = 0) {
-  const guilds = [...client.guilds.cache.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const guilds = [...client.guilds.cache.values()].sort((a, b) =>
+    String(a.name || '').localeCompare(String(b.name || ''))
+  );
   const pageCount = Math.max(1, Math.ceil(guilds.length / 25));
   const page = Math.min(Math.max(Number(requestedPage) || 0, 0), pageCount - 1);
   const pageGuilds = guilds.slice(page * 25, page * 25 + 25);
@@ -20,11 +32,15 @@ function buildPanel(client, selectedGuildId = null, requestedPage = 0) {
   const selectedOnPage = selected ? pageGuilds.some((guild) => guild.id === selected.id) : false;
 
   const options = pageGuilds.map((guild) => ({
-    label: (guild.name || 'Unnamed Server').replace(/[\r\n]/g, ' ').slice(0, 100),
-    value: guild.id,
-    description: `${guild.memberCount ?? 0} members • ${guild.id}`.slice(0, 100),
+    label: safeComponentText(guild.name, 'Unnamed Server', 100),
+    value: String(guild.id),
+    description: safeComponentText(`${guild.memberCount ?? 0} members - ${guild.id}`, 'Server', 100),
     ...(selectedOnPage && guild.id === selected?.id ? { default: true } : {}),
   }));
+
+  const selectedName = selected
+    ? safeComponentText(selected.name, 'Unnamed Server', 100)
+    : null;
 
   const embed = new EmbedBuilder()
     .setTitle('🛠️ SulfurCube HQ')
@@ -33,7 +49,7 @@ function buildPanel(client, selectedGuildId = null, requestedPage = 0) {
       `Servers the bot is currently in: **${guilds.length}**\n` +
       `Page **${page + 1}/${pageCount}**` +
       (selected
-        ? `\n\n**Selected:** ${(selected.name || 'Unnamed Server').replace(/[\r\n]/g, ' ')}\nID: ${selected.id}`
+        ? `\n\n**Selected:** ${selectedName}\nID: ${selected.id}`
         : '\n\nNo guild is currently available.')
     )
     .addFields(
@@ -61,23 +77,25 @@ function buildPanel(client, selectedGuildId = null, requestedPage = 0) {
     .setMaxValues(1)
     .addOptions(options);
 
+  const selectedId = selected?.id ?? 'none';
+
   const navigation = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`hq_page:${Math.max(0, page - 1)}:${selected?.id ?? 'none'}`)
+      .setCustomId(`hq_page:${Math.max(0, page - 1)}:${selectedId}`)
       .setLabel('Previous')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page === 0),
     new ButtonBuilder()
-      .setCustomId(`hq_page:${Math.min(pageCount - 1, page + 1)}:${selected?.id ?? 'none'}`)
+      .setCustomId(`hq_page:${Math.min(pageCount - 1, page + 1)}:${selectedId}`)
       .setLabel('Next')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page >= pageCount - 1),
     new ButtonBuilder()
-      .setCustomId(`hq_refresh:${page}:${selected?.id ?? 'none'}`)
+      .setCustomId(`hq_refresh:${page}:${selectedId}`)
       .setLabel('Refresh')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
-      .setCustomId(`hq_ownerrole:${selected?.id ?? 'none'}`)
+      .setCustomId(`hq_ownerrole:${selectedId}`)
       .setLabel('Owner Role')
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
@@ -88,12 +106,12 @@ function buildPanel(client, selectedGuildId = null, requestedPage = 0) {
 
   const controls = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`hq_server_on:${selected?.id ?? 'none'}`)
+      .setCustomId(`hq_server_on:${selectedId}`)
       .setLabel('Server ON')
       .setStyle(ButtonStyle.Success)
       .setDisabled(!selected),
     new ButtonBuilder()
-      .setCustomId(`hq_server_off:${selected?.id ?? 'none'}`)
+      .setCustomId(`hq_server_off:${selectedId}`)
       .setLabel('Server OFF')
       .setStyle(ButtonStyle.Danger)
       .setDisabled(!selected || selected.id === HQ_GUILD_ID),
@@ -117,12 +135,12 @@ function buildPanel(client, selectedGuildId = null, requestedPage = 0) {
       .setLabel('Testing Mode')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
-      .setCustomId(`hq_message:${selected?.id ?? 'none'}`)
+      .setCustomId(`hq_message:${selectedId}`)
       .setLabel('Message')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(!selected),
     new ButtonBuilder()
-      .setCustomId(`hq_leave:${selected?.id ?? 'none'}:${page}`)
+      .setCustomId(`hq_leave:${selectedId}:${page}`)
       .setLabel('Leave')
       .setStyle(ButtonStyle.Danger)
       .setDisabled(!selected || selected.id === HQ_GUILD_ID),
