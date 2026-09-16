@@ -42,8 +42,8 @@ function buildHoneypotComponents() {
 
 export default {
   data: new SlashCommandBuilder()
-    .setName('honeypot')
-    .setDescription('Create or manage the anti-spam honeypot channel.')
+    .setName('botboi')
+    .setDescription('Create or manage the botboi anti-spam honeypot.')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addSubcommand(subcommand =>
       subcommand
@@ -53,14 +53,14 @@ export default {
     .addSubcommand(subcommand =>
       subcommand
         .setName('remove')
-        .setDescription('Remove the configured honeypot channel.')
+        .setDescription('Remove the configured botboi honeypot channel.')
     ),
   category: 'Moderation',
 
   async execute(interaction, config, client) {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: '❌ You need the Administrator permission to manage the honeypot.',
+        content: '❌ You need the Administrator permission to manage the botboi honeypot.',
         ephemeral: true,
       });
     }
@@ -76,7 +76,7 @@ export default {
 
       if (existingChannel) {
         return interaction.reply({
-          content: `🍯 The honeypot is already set up: ${existingChannel}.`,
+          content: `🍯 The botboi honeypot is already set up: ${existingChannel}.`,
           ephemeral: true,
         });
       }
@@ -84,8 +84,8 @@ export default {
       const channel = await interaction.guild.channels.create({
         name: HONEYPOT_CHANNEL_NAME,
         type: ChannelType.GuildText,
-        topic: '🍯 SulfurCube honeypot — DO NOT TYPE HERE.',
-        reason: 'SulfurCube honeypot setup',
+        topic: '🍯 SulfurCube botboi honeypot — DO NOT TYPE HERE.',
+        reason: 'SulfurCube botboi honeypot setup',
         permissionOverwrites: [
           {
             id: interaction.guild.roles.everyone.id,
@@ -117,7 +117,7 @@ export default {
       });
 
       return interaction.reply({
-        content: `🍯 Honeypot created: ${channel}\n**Channel name:** \`botboi\``,
+        content: `🍯 Botboi honeypot created: ${channel}\n**Channel name:** \`botboi\``,
         ephemeral: true,
       });
     }
@@ -136,11 +136,11 @@ export default {
       });
 
       if (channel) {
-        await channel.delete('SulfurCube honeypot removed').catch(() => {});
+        await channel.delete('SulfurCube botboi honeypot removed').catch(() => {});
       }
 
       return interaction.reply({
-        content: '🍯 Honeypot removed.',
+        content: '🍯 Botboi honeypot removed.',
         ephemeral: true,
       });
     }
