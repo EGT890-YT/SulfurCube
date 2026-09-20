@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { EmbedBuilder } from 'discord.js';
 import { getGuildConfig, updateGuildConfig } from './config/guildConfig.js';
 import { logger } from '../utils/logger.js';
@@ -67,16 +66,24 @@ export async function resolveYouTubeChannel(input) {
   }
 
   const url = `https://www.youtube.com/@${handle}`;
-  const response = await axios.get(url, {
-    timeout: REQUEST_TIMEOUT,
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; SulfurCube/1.0)',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-    maxRedirects: 5,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SulfurCube/1.0)',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+  if (!response.ok) throw new Error(`YouTube returned HTTP ${response.status}.`);
 
-  const html = String(response.data || '');
+  const html = await response.text();
   const channelId =
     html.match(/<meta[^>]+itemprop=["']channelId["'][^>]+content=["'](UC[a-zA-Z0-9_-]+)["']/i)?.[1] ||
     html.match(/"channelId":"(UC[a-zA-Z0-9_-]+)"/i)?.[1] ||
@@ -99,15 +106,23 @@ export async function resolveYouTubeChannel(input) {
 }
 
 async function fetchFeed(channelId) {
-  const response = await axios.get(`${FEED_URL}${encodeURIComponent(channelId)}`, {
-    timeout: REQUEST_TIMEOUT,
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; SulfurCube/1.0)',
-      'Accept': 'application/atom+xml, application/xml;q=0.9, */*;q=0.8',
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  let response;
+  try {
+    response = await fetch(`${FEED_URL}${encodeURIComponent(channelId)}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SulfurCube/1.0)',
+        'Accept': 'application/atom+xml, application/xml;q=0.9, */*;q=0.8',
+      },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+  if (!response.ok) throw new Error(`YouTube feed returned HTTP ${response.status}.`);
 
-  return parseFeed(String(response.data || ''));
+  return parseFeed(await response.text());
 }
 
 async function classifyVideo(videoId) {
@@ -117,14 +132,22 @@ async function classifyVideo(videoId) {
   let type = 'longform';
 
   try {
-    const response = await axios.get(`https://www.youtube.com/watch?v=${videoId}`, {
-      timeout: REQUEST_TIMEOUT,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SulfurCube/1.0)',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      maxRedirects: 5,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    let response;
+    try {
+      response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; SulfurCube/1.0)',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!response.ok) throw new Error(`YouTube returned HTTP ${response.status}.`);
 
     const html = String(response.data || '');
     const isLive =
