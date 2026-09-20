@@ -146,7 +146,7 @@ export default {
       });
     } catch (error) {
       return interaction.reply({
-        content: `❌ ${error.message || 'Failed to configure YouTube notifications.'`,
+        content: `❌ ${error.message || 'Failed to configure YouTube notifications.'}`,
         ephemeral: true,
       });
     }
