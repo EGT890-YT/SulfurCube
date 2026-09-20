@@ -135,7 +135,7 @@ async function classifyVideo(videoId) {
     const isShort =
       /"isShorts":true/i.test(html) ||
       /"canonicalBaseUrl":"\/shorts\//i.test(html) ||
-      /https:\\/\\/www\.youtube\.com\\/shorts\\//i.test(html);
+      /https:\/\/www\.youtube\.com\/shorts\//i.test(html);
 
     if (isLive) type = 'live';
     else if (isShort) type = 'shorts';
