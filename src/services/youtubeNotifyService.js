@@ -18,13 +18,13 @@ function decodeXml(value = '') {
 }
 
 function getTag(xml, tag) {
-  const match = xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, 'i'));
+  const match = xml.match(new RegExp(`<${tag}(?:\\\\s[^>]*)?>([\\\\s\\\\S]*?)</${tag}>`, 'i'));
   return match ? decodeXml(match[1].trim()) : null;
 }
 
 function parseFeed(xml) {
   const entries = [];
-  const matches = xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gi);
+  const matches = xml.matchAll(/<entry>([\\s\\S]*?)<\\/entry>/gi);
 
   for (const match of matches) {
     const entry = match[1];
@@ -32,7 +32,7 @@ function parseFeed(xml) {
     const title = getTag(entry, 'title');
     const published = getTag(entry, 'published');
     const author = getTag(entry, 'name');
-    const linkMatch = entry.match(/<link[^>]+rel=["']alternate["'][^>]+href=["']([^"']+)["']/i);
+    const linkMatch = entry.match(/<link[^>]+rel=[\"']alternate[\"'][^>]+href=[\"']([^\"']+)[\"']/i);
 
     if (!videoId) continue;
 
@@ -50,12 +50,12 @@ function parseFeed(xml) {
 
 function normalizeHandle(input) {
   const value = String(input || '').trim();
-  const match = value.match(/youtube\.com\/@([^/?#\s]+)/i);
+  const match = value.match(/youtube\\.com\\/@([^/?#\\s]+)/i);
   if (match) return match[1];
 
   return value
     .replace(/^@/, '')
-    .replace(/^https?:\/\/(?:www\.)?youtube\.com\//i, '')
+    .replace(/^https?:\\/\\/(?:www\\.)?youtube\\.com\\//i, '')
     .split(/[/?#]/)[0];
 }
 
@@ -78,16 +78,16 @@ export async function resolveYouTubeChannel(input) {
 
   const html = String(response.data || '');
   const channelId =
-    html.match(/<meta[^>]+itemprop=["']channelId["'][^>]+content=["'](UC[a-zA-Z0-9_-]+)["']/i)?.[1] ||
-    html.match(/"channelId":"(UC[a-zA-Z0-9_-]+)"/i)?.[1] ||
-    html.match(/"externalId":"(UC[a-zA-Z0-9_-]+)"/i)?.[1];
+    html.match(/<meta[^>]+itemprop=[\"']channelId[\"'][^>]+content=[\"'](UC[a-zA-Z0-9_-]+)[\"']/i)?.[1] ||
+    html.match(/\"channelId\":\"(UC[a-zA-Z0-9_-]+)\"/i)?.[1] ||
+    html.match(/\"externalId\":\"(UC[a-zA-Z0-9_-]+)\"/i)?.[1];
 
   if (!channelId) {
     throw new Error('I could not find that YouTube channel. Make sure the handle is correct.');
   }
 
   const title =
-    html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
+    html.match(/<meta[^>]+property=[\"']og:title[\"'][^>]+content=[\"']([^\"']+)[\"']/i)?.[1] ||
     `@${handle}`;
 
   return {
@@ -128,14 +128,14 @@ async function classifyVideo(videoId) {
 
     const html = String(response.data || '');
     const isLive =
-      /"isLiveContent":true/i.test(html) ||
-      /"isLiveNow":true/i.test(html) ||
-      /"isLive":true/i.test(html);
+      /\"isLiveContent\":true/i.test(html) ||
+      /\"isLiveNow\":true/i.test(html) ||
+      /\"isLive\":true/i.test(html);
 
     const isShort =
-      /"isShorts":true/i.test(html) ||
-      /"canonicalBaseUrl":"\/shorts\//i.test(html) ||
-      /https:\\/\\/www\.youtube\.com\\/shorts\\//i.test(html);
+      /\"isShorts\":true/i.test(html) ||
+      /\"canonicalBaseUrl\":\"\\/shorts\\//i.test(html) ||
+      /https:\\/\\/www\\.youtube\\.com\\/shorts\\//i.test(html);
 
     if (isLive) type = 'live';
     else if (isShort) type = 'shorts';
@@ -248,8 +248,8 @@ export async function pollYouTubeNotifications(client) {
               users: [],
             };
 
-            const roleMatch = ping.match(/^<@&(\d+)>$/);
-            const userMatch = ping.match(/^<@!?(\d+)>$/);
+            const roleMatch = ping.match(/^<@&(\\d+)>$/);
+            const userMatch = ping.match(/^<@!?(\\d+)>$/);
 
             if (roleMatch) allowedMentions.roles.push(roleMatch[1]);
             else if (userMatch) allowedMentions.users.push(userMatch[1]);
@@ -285,3 +285,4 @@ export async function pollYouTubeNotifications(client) {
 }
 
 export { MAX_SUBSCRIPTIONS };
+
