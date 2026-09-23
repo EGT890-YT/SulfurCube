@@ -32,7 +32,13 @@ function parseFeed(xml) {
     const author = getTag(entry, 'name');
     const linkMatch = entry.match(/<link[^>]+rel=["']alternate["'][^>]+href=["']([^"']+)["']/i);
     if (!videoId) continue;
-    entries.push({ videoId, title: title || 'New upload', published: published || null, author: author || 'YouTube', url: linkMatch?.[1] || `https://www.youtube.com/watch?v=${videoId}` });
+    entries.push({
+      videoId,
+      title: title || 'New upload',
+      published: published || null,
+      author: author || 'YouTube',
+      url: linkMatch?.[1] || `https://www.youtube.com/watch?v=${videoId}`,
+    });
   }
   return entries;
 }
@@ -119,34 +125,39 @@ function buildNotificationEmbed(video, channel, type) {
     .setColor(type === 'live' ? '#ED4245' : type === 'shorts' ? '#FF0050' : '#5865F2')
     .setTitle(`${labels[type] || '📺 NEW UPLOAD'} — ${channel.name}`)
     .setDescription(`## [${video.title}](${video.url})`)
-    .addFields({ name: 'Channel', value: `[${channel.name}](${channel.url})`, inline: true }, { name: 'Type', value: labels[type] || type, inline: true })
+    .addFields(
+      { name: 'Channel', value: `[${channel.name}](${channel.url})`, inline: true },
+      { name: 'Type', value: labels[type] || type, inline: true },
+    )
     .setURL(video.url)
     .setTimestamp(video.published ? new Date(video.published) : new Date())
     .setFooter({ text: 'SulfurCube • YouTube Notifications' });
 }
 
-function expandTypes(type) {
-  return type === 'all' ? ['live', 'longform', 'shorts'] : [type];
-}
-
 export async function addYouTubeNotification(client, guildId, subscription) {
   const config = await getGuildConfig(client, guildId);
   const subscriptions = Array.isArray(config.notifyUploads) ? config.notifyUploads : [];
-  const types = expandTypes(subscription.type);
-  const needed = types.filter(type => !subscriptions.some(entry =>
-    entry.channelId === subscription.channelId &&
-    entry.youtubeChannelId === subscription.youtubeChannelId &&
-    entry.type === type
-  ));
-  if (!needed.length) throw new Error('Those YouTube notifications are already configured.');
-  if (subscriptions.length + needed.length > MAX_SUBSCRIPTIONS) {
+
+  if (subscriptions.length >= MAX_SUBSCRIPTIONS) {
     throw new Error(`You can only have ${MAX_SUBSCRIPTIONS} YouTube notification configurations per server.`);
   }
+
+  const duplicate = subscriptions.some(entry =>
+    entry.channelId === subscription.channelId &&
+    entry.youtubeChannelId === subscription.youtubeChannelId &&
+    entry.type === subscription.type
+  );
+  if (duplicate) throw new Error('That exact YouTube notification configuration is already configured.');
+
   const feed = await fetchFeed(subscription.youtubeChannelId);
   if (!feed.length) throw new Error('That YouTube channel has no public uploads available to monitor.');
-  for (const type of needed) {
-    subscriptions.push({ ...subscription, type, lastVideoId: feed[0].videoId, createdAt: Date.now() });
-  }
+
+  subscriptions.push({
+    ...subscription,
+    lastVideoId: feed[0].videoId,
+    createdAt: Date.now(),
+  });
+
   await updateGuildConfig(client, guildId, { notifyUploads: subscriptions });
   return subscriptions.length;
 }
@@ -155,7 +166,9 @@ export async function removeYouTubeNotifications(client, guildId, youtubeInput) 
   const config = await getGuildConfig(client, guildId);
   const subscriptions = Array.isArray(config.notifyUploads) ? config.notifyUploads : [];
   const handle = normalizeHandle(youtubeInput).toLowerCase();
-  const kept = subscriptions.filter(entry => String(entry.youtubeHandle || '').replace(/^@/, '').toLowerCase() !== handle);
+  const kept = subscriptions.filter(entry =>
+    String(entry.youtubeHandle || '').replace(/^@/, '').toLowerCase() !== handle
+  );
   const removed = subscriptions.length - kept.length;
   if (!removed) throw new Error('No YouTube notifications are configured for that handle.');
   await updateGuildConfig(client, guildId, { notifyUploads: kept });
@@ -183,12 +196,18 @@ export async function pollYouTubeNotifications(client) {
       const config = await getGuildConfig(client, guild.id);
       const subscriptions = Array.isArray(config.notifyUploads) ? config.notifyUploads : [];
       if (!subscriptions.length) continue;
+
       let changed = false;
       const nextSubscriptions = [];
+
       for (const subscription of subscriptions.slice(0, MAX_SUBSCRIPTIONS)) {
         try {
           const feed = await fetchFeed(subscription.youtubeChannelId);
-          if (!feed.length) { nextSubscriptions.push(subscription); continue; }
+          if (!feed.length) {
+            nextSubscriptions.push(subscription);
+            continue;
+          }
+
           const lastIndex = feed.findIndex(entry => entry.videoId === subscription.lastVideoId);
           if (lastIndex < 0) {
             subscription.lastVideoId = feed[0].videoId;
@@ -196,31 +215,52 @@ export async function pollYouTubeNotifications(client) {
             nextSubscriptions.push(subscription);
             continue;
           }
+
           const newEntries = feed.slice(0, lastIndex).reverse();
+
           for (const video of newEntries) {
             const type = await classifyVideo(video.videoId);
-            if (subscription.type !== type) continue;
+            if (subscription.type !== 'all' && subscription.type !== type) continue;
+
             const channel = await guild.channels.fetch(subscription.channelId).catch(() => null);
             if (!channel?.isTextBased()) continue;
+
             const ping = subscription.ping;
-            const allowedMentions = { parse: ping === '@everyone' || ping === '@here' ? ['everyone'] : [], roles: [], users: [] };
+            const allowedMentions = {
+              parse: ping === '@everyone' || ping === '@here' ? ['everyone'] : [],
+              roles: [],
+              users: [],
+            };
             const roleMatch = ping.match(/^<@&(\d+)>$/);
             const userMatch = ping.match(/^<@!?(\d+)>$/);
             if (roleMatch) allowedMentions.roles.push(roleMatch[1]);
             else if (userMatch) allowedMentions.users.push(userMatch[1]);
+
             await channel.send({
               content: ping,
-              embeds: [buildNotificationEmbed(video, { name: subscription.youtubeChannelName, url: `https://www.youtube.com/@${subscription.youtubeHandle.replace(/^@/, '')}` }, type)],
+              embeds: [
+                buildNotificationEmbed(
+                  video,
+                  {
+                    name: subscription.youtubeChannelName,
+                    url: `https://www.youtube.com/@${subscription.youtubeHandle.replace(/^@/, '')}`,
+                  },
+                  type,
+                ),
+              ],
               allowedMentions,
             });
           }
+
           subscription.lastVideoId = feed[0].videoId;
           changed = true;
         } catch (error) {
           logger.warn(`YouTube notification check failed for guild ${guild.id}: ${error.message}`);
         }
+
         nextSubscriptions.push(subscription);
       }
+
       if (changed) await updateGuildConfig(client, guild.id, { notifyUploads: nextSubscriptions });
     } catch (error) {
       logger.error(`YouTube notification polling failed for guild ${guild.id}:`, error);
