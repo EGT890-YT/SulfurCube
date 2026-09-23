@@ -18,4 +18,10 @@ export const GUILD_CONFIG_DEFAULTS = {
         enabled: false,
         channelId: null,
     },
+    antiNuke: {
+        enabled: true,
+        threshold: 3,
+        windowMs: 10_000,
+        action: 'ban',
+    },
 };
