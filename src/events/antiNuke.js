@@ -1,5 +1,6 @@
 import { Events } from 'discord.js';
 import { handleAntiNukeEvent } from '../services/antiNukeService.js';
+import { logger } from '../utils/logger.js';
 
 export default {
   name: Events.ClientReady,
@@ -14,25 +15,18 @@ export default {
     ];
 
     for (const [eventName, actionType] of handlers) {
-      client.on(eventName, async (...args) => {
+      client.on(eventName, async (target) => {
         try {
-          const target = args[0];
-          const guild = target?.guild ?? target?.guildId
-            ? (target.guild ?? client.guilds.cache.get(target.guildId))
-            : null;
+          const guild = target?.guild ?? client.guilds.cache.get(target?.guildId);
+          if (!guild || !target?.id) return;
 
-          if (!guild) return;
-
-          await handleAntiNukeEvent(
-            guild,
-            actionType,
-            target.id ?? target.user?.id,
-            client,
-          );
+          await handleAntiNukeEvent(guild, actionType, target.id, client);
         } catch (error) {
-          client.logger?.error?.('Anti-Nuke event error:', error);
+          logger.error('Anti-Nuke event error:', error);
         }
       });
     }
+
+    logger.info('🛡️ Anti-Nuke protection is monitoring destructive guild actions.');
   },
 };
