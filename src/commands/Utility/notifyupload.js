@@ -46,27 +46,39 @@ export default {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
       return interaction.reply({ content: '❌ You need **Manage Server** to configure YouTube notifications.', ephemeral: true });
     }
-    const pingInput = interaction.options.getString('ping', true);
+
+    const ping = normalizePing(interaction.options.getString('ping', true), interaction.guild);
     const youtubeInput = interaction.options.getString('youtube_channel', true);
     const discordChannel = interaction.options.getChannel('channel', true);
     const type = interaction.options.getString('type', true);
+
     try {
       const guildConfig = await getGuildConfig(client, interaction.guild.id);
       const current = Array.isArray(guildConfig.notifyUploads) ? guildConfig.notifyUploads : [];
-      const needed = type === 'all' ? 3 : 1;
-      if (current.length + needed > MAX_SUBSCRIPTIONS) {
-        return interaction.reply({ content: `❌ This configuration needs **${needed}** slot${needed === 1 ? '' : 's'}, but this server only has **${MAX_SUBSCRIPTIONS - current.length}** left. Maximum is **${MAX_SUBSCRIPTIONS}**.`, ephemeral: true });
+
+      if (current.length >= MAX_SUBSCRIPTIONS) {
+        return interaction.reply({
+          content: `❌ This server already has **${MAX_SUBSCRIPTIONS}/${MAX_SUBSCRIPTIONS}** YouTube notification configurations. Remove one with **/removeupload** to add another.`,
+          ephemeral: true,
+        });
       }
-      const ping = normalizePing(pingInput, interaction.guild);
+
       const youtube = await resolveYouTubeChannel(youtubeInput);
       const me = interaction.guild.members.me;
       const permissions = me ? discordChannel.permissionsFor(me) : null;
       if (!permissions?.has(PermissionFlagsBits.ViewChannel) || !permissions?.has(PermissionFlagsBits.SendMessages) || !permissions?.has(PermissionFlagsBits.EmbedLinks)) {
         return interaction.reply({ content: `❌ I need **View Channel**, **Send Messages**, and **Embed Links** in ${discordChannel}.`, ephemeral: true });
       }
+
       const total = await addYouTubeNotification(client, interaction.guild.id, {
-        ping, youtubeHandle: youtube.handle, youtubeChannelId: youtube.channelId, youtubeChannelName: youtube.name, channelId: discordChannel.id, type,
+        ping,
+        youtubeHandle: youtube.handle,
+        youtubeChannelId: youtube.channelId,
+        youtubeChannelName: youtube.name,
+        channelId: discordChannel.id,
+        type,
       });
+
       const typeLabel = { live: 'Live Streams', longform: 'Long-form Videos', shorts: 'Shorts', all: 'All 3 Types' }[type];
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
@@ -76,9 +88,10 @@ export default {
           { name: 'Ping', value: ping, inline: true },
           { name: 'YouTube', value: youtube.handle, inline: true },
           { name: 'Type', value: typeLabel, inline: true },
-          { name: 'Configured', value: `${total}/${MAX_SUBSCRIPTIONS}`, inline: true },
+          { name: 'Slot', value: `${total}/${MAX_SUBSCRIPTIONS}`, inline: true },
         )
         .setFooter({ text: 'SulfurCube • YouTube Notifications' });
+
       return interaction.reply({ embeds: [embed], ephemeral: true });
     } catch (error) {
       return interaction.reply({ content: `❌ ${error.message || 'Failed to configure YouTube notifications.'}`, ephemeral: true });
