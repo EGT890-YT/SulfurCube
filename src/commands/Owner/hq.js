@@ -17,20 +17,29 @@ function safeText(value, fallback = 'Unnamed Server', maxLength = 100) {
   return (text || fallback).slice(0, maxLength);
 }
 
-function buildPanel(client, selectedIndex = 0) {
+function buildPanel(client, selectedGuildId = null, page = 0) {
   const guilds = [...client.guilds.cache.values()].sort((a, b) =>
     safeText(a.name).localeCompare(safeText(b.name))
   );
 
-  const index = Math.min(Math.max(selectedIndex, 0), Math.max(guilds.length - 1, 0));
-  const selectedGuild = guilds[index] ?? null;
+  const pageSize = 25;
+  const pageCount = Math.max(1, Math.ceil(guilds.length / pageSize));
+  const currentPage = Math.min(Math.max(Number(page) || 0, 0), pageCount - 1);
+  const pageGuilds = guilds.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+
+  const selectedGuild = selectedGuildId
+    ? client.guilds.cache.get(selectedGuildId) ?? null
+    : null;
+
+  const selectedLabel = safeText(selectedGuild?.name, 'None selected');
 
   const embed = new EmbedBuilder()
     .setTitle('🛠️ SulfurCube HQ')
     .setDescription(
       `**Soverign SMP** is the bot HQ.\n\n` +
       `Servers: **${guilds.length}**\n` +
-      `Selected: **${safeText(selectedGuild?.name, 'None selected')}**`
+      `Selected: **${selectedLabel}**\n` +
+      `Page: **${currentPage + 1}/${pageCount}**`
     )
     .addFields(
       {
@@ -55,42 +64,44 @@ function buildPanel(client, selectedIndex = 0) {
 
   const rows = [];
 
-  if (guilds.length > 0) {
-    const options = guilds.slice(0, 25).map((guild, guildIndex) => ({
-      label: safeText(guild.name),
-      value: guild.id,
-      description: `Server ${guildIndex + 1} • ${guild.memberCount ?? '?'} members`.slice(0, 100),
-    }));
-
+  if (pageGuilds.length > 0) {
     rows.push(
       new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId('hq_guild')
-          .setPlaceholder('🌐 Select a server')
-          .addOptions(options),
+          .setPlaceholder(selectedGuild ? `🌐 ${safeText(selectedGuild.name, 'Select a server')}` : '🌐 Select a server')
+          .addOptions(
+            pageGuilds.map((guild) => ({
+              label: safeText(guild.name),
+              value: guild.id,
+              description: `${guild.memberCount ?? '?'} members`.slice(0, 100),
+              default: guild.id === selectedGuildId,
+            })),
+          ),
       ),
     );
   }
 
   const buttons = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId('hq_previous')
+      .setCustomId(`hq_page:${currentPage - 1}:${selectedGuildId ?? 'none'}`)
       .setLabel('◀️ Previous')
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(index <= 0),
+      .setDisabled(currentPage <= 0),
     new ButtonBuilder()
-      .setCustomId('hq_next')
+      .setCustomId(`hq_page:${currentPage + 1}:${selectedGuildId ?? 'none'}`)
       .setLabel('Next ▶️')
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(index >= Math.min(guilds.length - 1, 24)),
+      .setDisabled(currentPage >= pageCount - 1),
     new ButtonBuilder()
-      .setCustomId('hq_refresh')
+      .setCustomId(`hq_refresh:${currentPage}:${selectedGuildId ?? 'none'}`)
       .setLabel('🔄 Refresh')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
-      .setCustomId('hq_owner_role')
+      .setCustomId(`hq_ownerrole:${selectedGuildId ?? 'none'}`)
       .setLabel('👑 Owner Role')
-      .setStyle(ButtonStyle.Secondary),
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!selectedGuild),
     new ButtonBuilder()
       .setCustomId('hq_invite')
       .setLabel('🔗 Invite')
@@ -98,17 +109,45 @@ function buildPanel(client, selectedIndex = 0) {
   );
 
   const controls = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('hq_server_on').setLabel('🟢 Server ON').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('hq_server_off').setLabel('🔴 Server OFF').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('hq_bots_on').setLabel('🤖 All Bots ON').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('hq_maintenance_on').setLabel('🛠️ Maintenance ON').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('hq_maintenance_off').setLabel('🟢 Maintenance OFF').setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`hq_server_on:${selectedGuildId ?? 'none'}`)
+      .setLabel('🟢 Server ON')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(!selectedGuild),
+    new ButtonBuilder()
+      .setCustomId(`hq_server_off:${selectedGuildId ?? 'none'}`)
+      .setLabel('🔴 Server OFF')
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(!selectedGuild),
+    new ButtonBuilder()
+      .setCustomId('hq_all_on')
+      .setLabel('🤖 All Bots ON')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId('hq_maintenance_on')
+      .setLabel('🛠️ Maintenance ON')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId('hq_maintenance_off')
+      .setLabel('🟢 Maintenance OFF')
+      .setStyle(ButtonStyle.Success),
   );
 
   const actions = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('hq_testing').setLabel('🧪 Testing Mode').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('hq_message').setLabel('💬 Message').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('hq_leave').setLabel('🚪 Leave').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId('hq_testing')
+      .setLabel('🧪 Testing Mode')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`hq_message:${selectedGuildId ?? 'none'}`)
+      .setLabel('💬 Message')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(!selectedGuild),
+    new ButtonBuilder()
+      .setCustomId(`hq_leave:${selectedGuildId ?? 'none'}:${currentPage}`)
+      .setLabel('🚪 Leave')
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(!selectedGuild || selectedGuildId === null),
   );
 
   rows.push(buttons, controls, actions);
@@ -119,8 +158,8 @@ function buildPanel(client, selectedIndex = 0) {
   };
 }
 
-export function createHqPanel(client) {
-  return buildPanel(client);
+export function createHqPanel(client, selectedGuildId = null, page = 0) {
+  return buildPanel(client, selectedGuildId, page);
 }
 
 export default {
