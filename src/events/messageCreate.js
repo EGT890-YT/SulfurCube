@@ -114,11 +114,32 @@ async function handleHoneypot(message, client) {
 async function handlePrefixCommand(message, client) {
   try {
     const guildConfig = await getGuildConfig(client, message.guild.id);
-    const prefix = guildConfig?.prefix || getCommandPrefix();
-    const parsed = parsePrefixCommand(message.content, prefix);
-    
+    const configuredPrefix = typeof guildConfig?.prefix === 'string' ? guildConfig.prefix.trim() : '';
+    const globalPrefix = getCommandPrefix();
+
+    // Accept the server prefix and the current global prefix. This prevents
+    // stale guild configuration from silently breaking every prefix command
+    // after the global prefix is changed.
+    const candidatePrefixes = [...new Set(
+      [configuredPrefix, globalPrefix]
+        .filter(Boolean)
+        .sort((a, b) => b.length - a.length),
+    )];
+
+    let parsed = null;
+    let prefix = globalPrefix;
+
+    for (const candidatePrefix of candidatePrefixes) {
+      const candidate = parsePrefixCommand(message.content, candidatePrefix);
+      if (candidate) {
+        parsed = candidate;
+        prefix = candidatePrefix;
+        break;
+      }
+    }
+
     if (!parsed) {
-      return; 
+      return;
     }
 
     let { commandName, args } = parsed;
