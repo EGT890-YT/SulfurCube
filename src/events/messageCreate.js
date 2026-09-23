@@ -29,7 +29,7 @@ export default {
     try {
       if (!message.guild) return;
 
-      // The bot itself must never trigger its own honeypot.
+      // SulfurCube itself must never trigger its own BotBoi channel.
       if (message.author.id === client.user?.id) return;
 
       const honeypotTriggered = await handleHoneypot(message, client);
@@ -65,42 +65,48 @@ async function handleHoneypot(message, client) {
     }
 
     const member = message.member ?? await message.guild.members.fetch(message.author.id).catch(() => null);
+    const isBot = message.author.bot;
 
-    // Administrators are explicitly exempt and can type in botboi normally.
-    if (member?.permissions.has(PermissionFlagsBits.Administrator)) {
+    // SulfurCube is excluded above. Every other bot that types here is always
+    // treated as a BotBoi trigger, even if it has Administrator.
+    // Human Administrators remain exempt.
+    if (!isBot && member?.permissions.has(PermissionFlagsBits.Administrator)) {
       return false;
     }
 
-    // Remove the triggering message immediately even if the ban later fails.
     await message.delete().catch(() => {});
 
     if (!member) {
-      logger.warn(`Honeypot trigger could not resolve member ${message.author.id} in ${message.guild.id}`);
+      logger.warn(`BotBoi trigger could not resolve member ${message.author.id} in ${message.guild.id}`);
       return true;
     }
 
     const botMember = message.guild.members.me;
     if (!botMember?.permissions.has(PermissionFlagsBits.BanMembers)) {
-      logger.error(`Honeypot cannot ban ${message.author.tag}: SulfurCube lacks Ban Members permission in ${message.guild.name}.`);
+      logger.error(`BotBoi cannot ban ${message.author.tag}: SulfurCube lacks Ban Members permission in ${message.guild.name}.`);
       return true;
     }
 
-    // Discord's role hierarchy still applies. Do not attempt to ban a member
-    // whose highest role is equal to or higher than the bot's highest role.
+    // Discord role hierarchy still applies to every target, including bots.
+    // If a bot is above/equal to SulfurCube, Discord will reject the ban.
     if (member.roles.highest.position >= botMember.roles.highest.position) {
-      logger.warn(`Honeypot could not ban ${message.author.tag}: member role is equal to or above SulfurCube's highest role.`);
+      logger.warn(`BotBoi could not ban ${message.author.tag}: member role is equal to or above SulfurCube's highest role.`);
       return true;
     }
 
     await message.guild.members.ban(member, {
       deleteMessageSeconds: HONEYPOT_DELETE_SECONDS,
-      reason: 'SulfurCube Honeypot trigger',
+      reason: isBot
+        ? 'SulfurCube BotBoi trigger - bot message'
+        : 'SulfurCube BotBoi trigger',
     });
 
-    logger.warn(`🍯 Honeypot triggered in ${message.guild.name}: permanently banned ${message.author.tag} (${message.author.id}) and requested deletion of their recent messages.`);
+    logger.warn(
+      `BotBoi triggered in ${message.guild.name}: permanently banned ${message.author.tag} (${message.author.id}) and requested deletion of their recent messages.`
+    );
     return true;
   } catch (error) {
-    logger.error(`Error handling honeypot trigger in ${message.guild?.name || 'unknown guild'}:`, error);
+    logger.error(`Error handling BotBoi trigger in ${message.guild?.name || 'unknown guild'}:`, error);
     return true;
   }
 }
@@ -134,8 +140,6 @@ async function handlePrefixCommand(message, client) {
       return; 
     }
 
-    // /bot and /hq are recovery commands and must still reach their own
-    // owner-only checks while maintenance mode is active.
     const isRecoveryCommand = ['bot', 'hq'].includes(resolvedCommandName);
     const isOwner = isBotOwner(message.author.id, client);
     const isOwnerRecoveryCommand = isOwner && isRecoveryCommand;
@@ -156,7 +160,7 @@ async function handlePrefixCommand(message, client) {
         embeds: [createEmbed({
           title: 'Feature Disabled',
           description: getBotMessage('commandDisabled'),
-          color: 'error',
+          color: 'warning',
         })],
       }).catch(() => {});
       return;
@@ -167,7 +171,7 @@ async function handlePrefixCommand(message, client) {
       if (restriction.blocked && restriction.reason) {
         const embed = createEmbed({
           title: 'Slash Command Only',
-          description: `${restriction.reason}\nUse \`/${resolvedCommandName}\` instead.`,
+          description: `${restriction.reason}\nUse `/${resolvedCommandName}` instead.`,
           color: 'info',
         });
         await message.channel.send({ embeds: [embed] }).catch(() => {});
@@ -224,8 +228,6 @@ async function handleCountingGame(message, client) {
 
     const content = message.content.trim();
 
-    // Only numeric entries participate in the counting game.
-    // Words/letters are ignored completely: no reaction and no reset.
     if (!/^[0-9]+$/.test(content)) {
       return true;
     }
