@@ -10,7 +10,7 @@ ENV SULFURCUBE_GIT_COMMIT=${GIT_COMMIT_SHA}
 ENV SULFURCUBE_GIT_COMMIT_MESSAGE=${GIT_COMMIT_MESSAGE}
 
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY . .
 
