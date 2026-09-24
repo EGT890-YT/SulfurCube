@@ -106,8 +106,11 @@ async function handleHoneypot(message, client) {
     );
     return true;
   } catch (error) {
+    // BotBoi must never swallow normal message processing if its config lookup
+    // or moderation logic fails. Prefix commands and other message handlers
+    // must continue even when BotBoi has an internal error.
     logger.error(`Error handling BotBoi trigger in ${message.guild?.name || 'unknown guild'}:`, error);
-    return true;
+    return false;
   }
 }
 
