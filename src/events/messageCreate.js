@@ -27,6 +27,9 @@ export default {
   name: Events.MessageCreate,
   async execute(message, client) {
     try {
+      // Temporary prefix diagnostic: confirms Discord is delivering MessageCreate events
+      // and shows the exact message content received by the running bot.
+      logger.info('[PREFIX DEBUG] MessageCreate received | author=' + (message.author?.tag || 'unknown') + ' | bot=' + (message.author?.bot ?? 'unknown') + ' | guild=' + (message.guild?.id || 'DM') + ' | content=' + JSON.stringify(message.content ?? ''));
       if (!message.guild) return;
 
       // SulfurCube itself must never trigger its own BotBoi channel.
